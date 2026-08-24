@@ -343,14 +343,26 @@ def cmd_estado():
 
 
 def hora_chilena_correcta(objetivo=12):
-    """True si en Santiago son las <objetivo> h. Evita depender del horario de verano."""
+    """True si en Santiago son las <objetivo> h. Evita depender del horario de verano.
+
+    El cron lanza dos ejecuciones el mismo dia (15:00 y 16:00 UTC) porque Chile
+    cambia de hora dos veces al ano; solo una de las dos cae a las 12:00 locales
+    y es la que debe publicar.
+
+    Si no se puede leer la zona horaria, NO se publica. Ante la duda es mejor
+    saltarse una publicacion -que se recupera con un 'Run workflow' a mano- que
+    publicar en las dos ejecuciones y gastar dos sets el mismo dia.
+    """
     try:
         from zoneinfo import ZoneInfo
         from datetime import datetime
         ahora = datetime.now(ZoneInfo("America/Santiago"))
     except Exception as e:                                   # sin tzdata
-        print("Aviso: no se pudo leer la hora de Chile (%s). Se publica igual." % e)
-        return True
+        print("No se pudo leer la hora de Chile (%s)." % e)
+        print("Esta ejecucion no publica: el cron corre dos veces al dia y sin")
+        print("la zona horaria no se puede saber cual de las dos corresponde.")
+        print("Instala tzdata, o publica a mano con: python publicar.py")
+        return False
     print("Hora en Santiago: %s" % ahora.strftime("%Y-%m-%d %H:%M %Z"))
     return ahora.hour == objetivo
 

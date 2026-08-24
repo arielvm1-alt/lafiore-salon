@@ -39,6 +39,12 @@ jobs:
         with:
           python-version: '3.12'
 
+      # El script decide cual de las dos ejecuciones del dia publica mirando la
+      # hora real en Santiago. Sin zona horaria no publica ninguna, asi que la
+      # aseguramos aunque el runner ya suela traerla.
+      - name: Asegurar la zona horaria de Chile
+        run: python -m pip install --quiet tzdata
+
       - name: Publicar
         id: publicar
         env:
