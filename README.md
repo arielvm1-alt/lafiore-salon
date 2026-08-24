@@ -192,31 +192,40 @@ Sin este vínculo la API no funciona. Es el paso que más se olvida.
 4. Permisos: `instagram_basic`, `instagram_content_publish`, `pages_show_list`,
    `business_management`.
 
-**c) El token y el `ig_user_id`**
+**c) El token de 60 días y el `IG_USER_ID`**
+
+Todo se hace en el navegador, sin consola y **sin la clave secreta de la app**.
 
 1. Ve al **Explorador de la API Graph**
    (<https://developers.facebook.com/tools/explorer/>).
-2. Arriba, elige tu app y pulsa *Generar token de acceso*. Marca los cuatro
-   permisos y acepta.
-3. Ese token dura 1 hora. Para conseguir el de 60 días:
+2. Arriba a la derecha, elige tu app y pulsa **Generar token de acceso**.
+   Marca los cuatro permisos y acepta. Cuando salga la lista de páginas,
+   **incluye la página vinculada a @la_fiore.cl**: si solo autorizas la de
+   Academy, después no aparece el salón.
+3. Copia ese token con el icono de copiar. Dura 1 hora.
+4. Ve al **Depurador de tokens de acceso**
+   (<https://developers.facebook.com/tools/debug/accesstoken/>), pega el token
+   y pulsa **Depurar**.
+5. Abajo del todo aparece el botón **«Ampliar token de acceso»**. Púlsalo.
+   El token que devuelve es el de 60 días: ese es tu **`IG_ACCESS_TOKEN`**.
+6. Vuelve al Explorador, pega el token largo en el campo de arriba y pide:
 
-   ```bash
-   curl -s "https://graph.facebook.com/v26.0/oauth/access_token?grant_type=fb_exchange_token&client_id=TU_APP_ID&client_secret=TU_APP_SECRET&fb_exchange_token=EL_TOKEN_CORTO"
+   ```
+   me/accounts?fields=name,instagram_business_account{id,username}
    ```
 
-4. Con ese token, saca el id de la cuenta de Instagram:
+   En la respuesta busca la página cuyo `username` sea `la_fiore.cl`. El `id`
+   que está dentro de su `instagram_business_account` es tu **`IG_USER_ID`**.
+   Ojo: es el id de dentro de `instagram_business_account`, no el `id` de la
+   página, que es otro número.
 
-   ```bash
-   curl -s "https://graph.facebook.com/v26.0/me/accounts?access_token=EL_TOKEN_LARGO"
-   ```
-
-   Copia el `id` de tu página y pídele su cuenta de Instagram:
-
-   ```bash
-   curl -s "https://graph.facebook.com/v26.0/ID_DE_LA_PAGINA?fields=instagram_business_account&access_token=EL_TOKEN_LARGO"
-   ```
-
-   El número de `instagram_business_account` es tu **`IG_USER_ID`**.
+> **Por qué así y no por consola.** El intercambio por `curl` con la clave
+> secreta de la app es el método que documenta Meta, pero pide distinguir
+> entre dos claves parecidas y falla con un error poco claro cuando te
+> equivocas. El Depurador hace el mismo intercambio del lado del servidor y
+> no necesita la clave. Si aun así prefieres la consola, en el repositorio
+> está `obtener_credenciales.py`, que pide clave y token ocultos y hace los
+> dos pasos de una vez.
 
 > **Ojo:** `@la_fiore.cl` es una cuenta distinta de `@La_Fiore_Academy`. El
 > token y el `IG_USER_ID` de Academy **no sirven aquí**. Hay que sacar los de
