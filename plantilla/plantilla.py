@@ -425,8 +425,13 @@ def portada(s):
 
 
 def historia(s):
-    """Misma portada en 1080x1920 para publicar como historia."""
-    return _documento("portada historia", _cuerpo_portada(s, "En el perfil"), ALTO_HISTORIA)
+    """Misma portada en 1080x1920 para publicar como historia.
+
+    La historia va al perfil, no al carrusel: por eso el llamado no es
+    "desliza" sino la invitacion a ver el carrusel completo en el feed.
+    """
+    return _documento("portada historia",
+                      _cuerpo_portada(s, "Míralo en el perfil"), ALTO_HISTORIA)
 
 
 def interior(s, indice):
