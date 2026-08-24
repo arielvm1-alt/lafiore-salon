@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.env
+credenciales.txt
+
+# Material de marca en bruto: PDFs, .ai, zips y fuentes originales.
+# Vive solo en tu computador. Lo que el proyecto necesita ya esta
+# derivado en assets/ (el sello en PNG y las dos fuentes corporativas).
+insumos/

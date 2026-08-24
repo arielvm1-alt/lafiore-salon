@@ -1,0 +1,426 @@
+# -*- coding: utf-8 -*-
+"""
+Publicador de carruseles de La Fiore en Instagram (Content Publishing API de Meta).
+
+Sube UN set por ejecucion: el siguiente pendiente segun estado.json.
+
+Uso:
+    python publicar.py                 # publica el siguiente set pendiente
+    python publicar.py --set 3         # publica el set 03 aunque no toque
+    python publicar.py --dry-run       # muestra que haria, sin llamar a la API
+    python publicar.py --verificar     # comprueba token, cuenta y cuota
+    python publicar.py --estado        # muestra el calendario de publicacion
+
+Variables de entorno necesarias:
+    IG_USER_ID       id de la cuenta profesional de Instagram
+    IG_ACCESS_TOKEN  token de larga duracion
+    IG_BASE_URL      URL publica donde viven las imagenes, sin barra final.
+                     Ej: https://raw.githubusercontent.com/USUARIO/lafiore-salon/main/salida
+    IG_API_VERSION   opcional, por defecto v26.0
+
+Sin dependencias externas: solo biblioteca estandar.
+"""
+
+import argparse
+import json
+import os
+import ssl
+import sys
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+
+RAIZ = os.path.dirname(os.path.abspath(__file__))
+SALIDA = os.path.join(RAIZ, "salida")
+ESTADO = os.path.join(RAIZ, "estado.json")
+
+# La consola de Windows usa cp1252 y rompe con emojis y tildes: forzamos UTF-8.
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
+
+
+LAMINAS = ["01_portada", "02_pagina", "03_pagina", "04_pagina", "05_pagina", "06_cierre"]
+HISTORIA = "historia"      # 1080x1920, se publica como historia tras el carrusel
+
+REINTENTOS = 4
+ESPERA_BASE = 5           # segundos; se duplica en cada reintento
+ESPERA_CONTENEDOR = 5     # segundos entre consultas de estado del contenedor
+MAX_ESPERA_CONTENEDOR = 180
+
+
+class ErrorPublicacion(Exception):
+    pass
+
+
+# --------------------------------------------------------------------------
+# configuracion
+# --------------------------------------------------------------------------
+
+def config():
+    faltan = [k for k in ("IG_USER_ID", "IG_ACCESS_TOKEN", "IG_BASE_URL") if not os.environ.get(k)]
+    if faltan:
+        raise ErrorPublicacion(
+            "Faltan variables de entorno: %s\n"
+            "Revisa el README, seccion 'Accesos'." % ", ".join(faltan))
+    return {
+        "user_id": os.environ["IG_USER_ID"].strip(),
+        "token": os.environ["IG_ACCESS_TOKEN"].strip(),
+        "base_url": os.environ["IG_BASE_URL"].strip().rstrip("/"),
+        "version": os.environ.get("IG_API_VERSION", "v26.0").strip(),
+    }
+
+
+def _api(cfg, ruta):
+    return "https://graph.facebook.com/%s/%s" % (cfg["version"], ruta.lstrip("/"))
+
+
+# --------------------------------------------------------------------------
+# llamadas HTTP
+# --------------------------------------------------------------------------
+
+def _peticion(url, datos=None, metodo=None):
+    ctx = ssl.create_default_context()
+    cuerpo = urllib.parse.urlencode(datos).encode("utf-8") if datos else None
+    req = urllib.request.Request(url, data=cuerpo, method=metodo or ("POST" if datos else "GET"))
+    req.add_header("User-Agent", "lafiore-salon-publisher/1.0")
+    try:
+        with urllib.request.urlopen(req, context=ctx, timeout=120) as r:
+            return json.loads(r.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        detalle = e.read().decode("utf-8", "replace")
+        try:
+            err = json.loads(detalle).get("error", {})
+            detalle = "%s (code %s, subcode %s)" % (
+                err.get("message", detalle), err.get("code"), err.get("error_subcode"))
+        except ValueError:
+            pass
+        raise ErrorPublicacion("HTTP %s en %s -> %s" % (e.code, url.split("?")[0], detalle))
+    except urllib.error.URLError as e:
+        raise ErrorPublicacion("Sin conexion con la API: %s" % e.reason)
+
+
+def _con_reintento(descripcion, fn):
+    espera = ESPERA_BASE
+    ultimo = None
+    for intento in range(1, REINTENTOS + 1):
+        try:
+            return fn()
+        except ErrorPublicacion as e:
+            ultimo = e
+            if intento == REINTENTOS:
+                break
+            print("   ! %s fallo (intento %d/%d): %s" % (descripcion, intento, REINTENTOS, e))
+            print("     reintento en %ds" % espera)
+            time.sleep(espera)
+            espera *= 2
+    raise ErrorPublicacion("%s: agotados los reintentos. Ultimo error: %s" % (descripcion, ultimo))
+
+
+# --------------------------------------------------------------------------
+# estado
+# --------------------------------------------------------------------------
+
+def cargar_estado():
+    if not os.path.exists(ESTADO):
+        raise ErrorPublicacion("No existe estado.json. Ejecuta: python publicar.py --iniciar")
+    with open(ESTADO, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def guardar_estado(estado):
+    with open(ESTADO, "w", encoding="utf-8") as f:
+        json.dump(estado, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+
+
+def crear_estado():
+    estado = {
+        "zona_horaria": "America/Santiago",
+        "orden": "un set por lunes y miercoles, 12:00 hora de Chile",
+        "sets": [
+            {"set": "set_%02d" % i, "estado": "pendiente",
+             "publicado_en": None, "media_id": None, "intentos": 0}
+            for i in range(1, 11)
+        ],
+    }
+    guardar_estado(estado)
+    return estado
+
+
+def siguiente_pendiente(estado):
+    for s in estado["sets"]:
+        if s["estado"] == "pendiente":
+            return s
+    return None
+
+
+# --------------------------------------------------------------------------
+# publicacion
+# --------------------------------------------------------------------------
+
+def caption_de(nombre_set):
+    ruta = os.path.join(SALIDA, "captions.json")
+    with open(ruta, encoding="utf-8") as f:
+        return json.load(f)[nombre_set]
+
+
+def urls_de(cfg, nombre_set):
+    urls = []
+    for lam in LAMINAS:
+        local = os.path.join(SALIDA, nombre_set, lam + ".jpg")
+        if not os.path.exists(local):
+            raise ErrorPublicacion("Falta la imagen %s. Ejecuta primero el render." % local)
+        urls.append("%s/%s/%s.jpg" % (cfg["base_url"], nombre_set, lam))
+    return urls
+
+
+def cuota(cfg):
+    """Publicaciones consumidas en las ultimas 24 h (limite de Meta: 25)."""
+    url = _api(cfg, "%s/content_publishing_limit?fields=quota_usage&access_token=%s"
+               % (cfg["user_id"], urllib.parse.quote(cfg["token"])))
+    datos = _peticion(url)
+    try:
+        return int(datos["data"][0]["quota_usage"])
+    except (KeyError, IndexError, ValueError):
+        return None
+
+
+def crear_item(cfg, image_url):
+    def hacer():
+        return _peticion(_api(cfg, "%s/media" % cfg["user_id"]), {
+            "image_url": image_url,
+            "is_carousel_item": "true",
+            "access_token": cfg["token"],
+        })
+    return _con_reintento("subir %s" % image_url.rsplit("/", 1)[-1], hacer)["id"]
+
+
+def crear_contenedor(cfg, hijos, caption):
+    def hacer():
+        return _peticion(_api(cfg, "%s/media" % cfg["user_id"]), {
+            "media_type": "CAROUSEL",
+            "children": ",".join(hijos),
+            "caption": caption,
+            "access_token": cfg["token"],
+        })
+    return _con_reintento("crear contenedor del carrusel", hacer)["id"]
+
+
+def esperar_listo(cfg, creation_id):
+    """Consulta el contenedor hasta que quede FINISHED."""
+    limite = time.time() + MAX_ESPERA_CONTENEDOR
+    while True:
+        url = _api(cfg, "%s?fields=status_code,status&access_token=%s"
+                   % (creation_id, urllib.parse.quote(cfg["token"])))
+        datos = _peticion(url)
+        codigo = datos.get("status_code")
+        if codigo == "FINISHED":
+            return
+        if codigo in ("ERROR", "EXPIRED"):
+            raise ErrorPublicacion("El contenedor quedo en %s: %s"
+                                   % (codigo, datos.get("status", "sin detalle")))
+        if time.time() > limite:
+            raise ErrorPublicacion("El contenedor sigue en %s tras %ds"
+                                   % (codigo, MAX_ESPERA_CONTENEDOR))
+        print("   . contenedor %s, esperando..." % codigo)
+        time.sleep(ESPERA_CONTENEDOR)
+
+
+def publicar_contenedor(cfg, creation_id):
+    def hacer():
+        return _peticion(_api(cfg, "%s/media_publish" % cfg["user_id"]), {
+            "creation_id": creation_id,
+            "access_token": cfg["token"],
+        })
+    return _con_reintento("publicar el carrusel", hacer)["id"]
+
+
+def publicar_historia(cfg, nombre_set):
+    """Sube la portada 9:16 como historia. Devuelve el media_id o None."""
+    local = os.path.join(SALIDA, nombre_set, HISTORIA + ".jpg")
+    if not os.path.exists(local):
+        print("   (sin historia.jpg, me la salto)")
+        return None
+    url = "%s/%s/%s.jpg" % (cfg["base_url"], nombre_set, HISTORIA)
+
+    def crear():
+        return _peticion(_api(cfg, "%s/media" % cfg["user_id"]), {
+            "image_url": url,
+            "media_type": "STORIES",
+            "access_token": cfg["token"],
+        })
+
+    creation_id = _con_reintento("crear la historia", crear)["id"]
+    esperar_listo(cfg, creation_id)
+    media_id = publicar_contenedor(cfg, creation_id)
+    print("   HISTORIA PUBLICADA. media_id = %s" % media_id)
+    return media_id
+
+
+def publicar_set(cfg, nombre_set, dry_run=False, sin_historia=False):
+    caption = caption_de(nombre_set)
+    urls = urls_de(cfg, nombre_set)
+
+    print("Publicando %s (%d laminas)" % (nombre_set, len(urls)))
+    for u in urls:
+        print("   -", u)
+    print("Caption:\n%s\n" % "\n".join("   | " + l for l in caption.split("\n")))
+
+    if not sin_historia:
+        print("Historia: %s/%s/%s.jpg" % (cfg["base_url"], nombre_set, HISTORIA))
+
+    if dry_run:
+        print("[dry-run] no se llamo a la API.")
+        return None, None
+
+    usadas = cuota(cfg)
+    if usadas is not None:
+        print("Cuota usada en 24 h: %d/25" % usadas)
+        if usadas >= 25:
+            raise ErrorPublicacion("Cuota de publicacion agotada. Reintenta mas tarde.")
+
+    hijos = []
+    for i, u in enumerate(urls, start=1):
+        hijos.append(crear_item(cfg, u))
+        print("   %d/%d subida (creation_id %s)" % (i, len(urls), hijos[-1]))
+
+    contenedor = crear_contenedor(cfg, hijos, caption)
+    print("   contenedor %s creado" % contenedor)
+
+    esperar_listo(cfg, contenedor)
+    print("   contenedor FINISHED")
+
+    media_id = publicar_contenedor(cfg, contenedor)
+    print("   PUBLICADO. media_id = %s" % media_id)
+
+    historia_id = None
+    if not sin_historia:
+        print("\nPublicando la historia...")
+        try:
+            historia_id = publicar_historia(cfg, nombre_set)
+        except ErrorPublicacion as e:
+            # el carrusel ya esta publicado: la historia no debe tumbar la ejecucion
+            print("   ! la historia fallo: %s" % e)
+    return media_id, historia_id
+
+
+# --------------------------------------------------------------------------
+# comandos
+# --------------------------------------------------------------------------
+
+def cmd_verificar(cfg):
+    url = _api(cfg, "%s?fields=id,username,media_count&access_token=%s"
+               % (cfg["user_id"], urllib.parse.quote(cfg["token"])))
+    datos = _peticion(url)
+    print("Cuenta:      @%s (id %s)" % (datos.get("username", "?"), datos.get("id")))
+    print("Media count: %s" % datos.get("media_count"))
+    usadas = cuota(cfg)
+    print("Cuota 24 h:  %s/25" % (usadas if usadas is not None else "?"))
+    print("Version API: %s" % cfg["version"])
+    print("Base URL:    %s" % cfg["base_url"])
+    print("\nAccesos correctos.")
+    return 0
+
+
+def cmd_estado():
+    estado = cargar_estado()
+    print("Zona horaria: %s" % estado["zona_horaria"])
+    for s in estado["sets"]:
+        marca = {"publicado": "OK ", "pendiente": " . ", "error": "ERR"}.get(s["estado"], "  ?")
+        extra = ""
+        if s["publicado_en"]:
+            extra = "  %s  media_id %s" % (s["publicado_en"], s["media_id"])
+        elif s["intentos"]:
+            extra = "  intentos: %d" % s["intentos"]
+        print("  %s %s%s" % (marca, s["set"], extra))
+    pendiente = siguiente_pendiente(estado)
+    print("\nSiguiente: %s" % (pendiente["set"] if pendiente else "ninguno, todo publicado"))
+    return 0
+
+
+def hora_chilena_correcta(objetivo=12):
+    """True si en Santiago son las <objetivo> h. Evita depender del horario de verano."""
+    try:
+        from zoneinfo import ZoneInfo
+        from datetime import datetime
+        ahora = datetime.now(ZoneInfo("America/Santiago"))
+    except Exception as e:                                   # sin tzdata
+        print("Aviso: no se pudo leer la hora de Chile (%s). Se publica igual." % e)
+        return True
+    print("Hora en Santiago: %s" % ahora.strftime("%Y-%m-%d %H:%M %Z"))
+    return ahora.hour == objetivo
+
+
+def cmd_publicar(args):
+    if args.respetar_hora and not hora_chilena_correcta(args.hora):
+        print("No son las %d:00 en Chile. Esta ejecucion no publica." % args.hora)
+        return 0
+
+    estado = cargar_estado()
+
+    if args.set:
+        nombre = "set_%02d" % args.set
+        entrada = next((s for s in estado["sets"] if s["set"] == nombre), None)
+        if entrada is None:
+            raise ErrorPublicacion("No existe %s en estado.json" % nombre)
+    else:
+        entrada = siguiente_pendiente(estado)
+        if entrada is None:
+            print("No queda ningun set pendiente. Nada que hacer.")
+            return 0
+
+    cfg = config()
+    try:
+        media_id, historia_id = publicar_set(
+            cfg, entrada["set"], dry_run=args.dry_run, sin_historia=args.sin_historia)
+    except ErrorPublicacion:
+        if not args.dry_run:
+            entrada["estado"] = "error"
+            entrada["intentos"] = entrada.get("intentos", 0) + 1
+            guardar_estado(estado)
+        raise
+
+    if not args.dry_run:
+        entrada["estado"] = "publicado"
+        entrada["media_id"] = media_id
+        entrada["historia_media_id"] = historia_id
+        entrada["publicado_en"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+        guardar_estado(estado)
+    return 0
+
+
+def main():
+    p = argparse.ArgumentParser(description="Publica un carrusel de La Fiore en Instagram.")
+    p.add_argument("--set", type=int, help="numero de set a publicar (1-10)")
+    p.add_argument("--dry-run", action="store_true", help="no llama a la API")
+    p.add_argument("--sin-historia", action="store_true",
+                   help="publica solo el carrusel, sin la historia")
+    p.add_argument("--verificar", action="store_true", help="comprueba token, cuenta y cuota")
+    p.add_argument("--estado", action="store_true", help="muestra el calendario de publicacion")
+    p.add_argument("--iniciar", action="store_true", help="crea estado.json desde cero")
+    p.add_argument("--respetar-hora", action="store_true",
+                   help="solo publica si en Chile es la hora indicada (para el cron con horario de verano)")
+    p.add_argument("--hora", type=int, default=12, help="hora local de Chile en la que publicar (defecto 12)")
+    args = p.parse_args()
+
+    try:
+        if args.iniciar:
+            crear_estado()
+            print("estado.json creado con los 10 sets pendientes.")
+            return 0
+        if args.estado:
+            return cmd_estado()
+        if args.verificar:
+            return cmd_verificar(config())
+        return cmd_publicar(args)
+    except ErrorPublicacion as e:
+        print("\nERROR: %s" % e, file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
