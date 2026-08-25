@@ -312,6 +312,80 @@ def publicar_set(cfg, nombre_set, dry_run=False, sin_historia=False):
 # comandos
 # --------------------------------------------------------------------------
 
+DIAS_DE_AVISO = 14        # por debajo de esto, --token-info avisa
+
+
+def info_token(cfg):
+    """Que clase de token hay cargado y cuanto le queda. Nunca lo imprime."""
+    url = _api(cfg, "debug_token?input_token=%s&access_token=%s"
+               % (urllib.parse.quote(cfg["token"]), urllib.parse.quote(cfg["token"])))
+    datos = _peticion(url).get("data", {})
+    caduca = int(datos.get("expires_at", 0) or 0)
+    return {
+        "tipo": datos.get("type", "?"),
+        "valido": bool(datos.get("is_valid")),
+        "caduca_en": caduca,                  # 0 = no caduca nunca
+        "permisos": datos.get("scopes", []),
+    }
+
+
+def dias_restantes(caduca_en):
+    """Dias hasta que caduque. None si no caduca nunca."""
+    if not caduca_en:
+        return None
+    return int((caduca_en - time.time()) // 86400)
+
+
+def token_de_pagina(cfg):
+    """Token de la pagina dueña de la cuenta de Instagram, o None.
+
+    Los tokens de pagina derivados de un token de usuario de larga duracion no
+    caducan. Si el que esta cargado es de usuario, publicamos con el derivado.
+    """
+    try:
+        url = _api(cfg, "me/accounts?fields=instagram_business_account,access_token"
+                        "&access_token=%s" % urllib.parse.quote(cfg["token"]))
+        for pagina in _peticion(url).get("data", []):
+            ig = pagina.get("instagram_business_account") or {}
+            if str(ig.get("id")) == str(cfg["user_id"]):
+                return pagina.get("access_token")
+    except ErrorPublicacion:
+        return None
+    return None
+
+
+def cmd_token_info(cfg):
+    """Informa del estado del token. Devuelve 3 si esta por caducar."""
+    info = info_token(cfg)
+    dias = dias_restantes(info["caduca_en"])
+
+    print("Tipo de token:  %s" % info["tipo"])
+    print("Valido:         %s" % ("si" if info["valido"] else "NO"))
+    if dias is None:
+        print("Caduca:         nunca")
+    else:
+        from datetime import datetime
+        fecha = datetime.utcfromtimestamp(info["caduca_en"]).strftime("%d-%m-%Y")
+        print("Caduca:         %s  (quedan %d dias)" % (fecha, dias))
+    print("Permisos:       %s" % ", ".join(info["permisos"]) or "(ninguno)")
+
+    if not info["valido"]:
+        print("\nEl token ya no sirve. Hay que renovarlo: ver README, seccion 5.1c.")
+        return 1
+
+    if dias is None:
+        print("\nEste token no caduca. No hay nada que renovar.")
+        return 0
+
+    print("\nEste token caduca. Para no depender de renovarlo a mano, cambialo por")
+    print("un token de PAGINA, que no caduca nunca. Ver README, seccion 7.")
+
+    if dias <= DIAS_DE_AVISO:
+        print("\nAVISO: quedan %d dias. Renuevalo ya." % dias)
+        return 3
+    return 0
+
+
 def cmd_verificar(cfg):
     url = _api(cfg, "%s?fields=id,username,media_count&access_token=%s"
                % (cfg["user_id"], urllib.parse.quote(cfg["token"])))
@@ -322,7 +396,15 @@ def cmd_verificar(cfg):
     print("Cuota 24 h:  %s/25" % (usadas if usadas is not None else "?"))
     print("Version API: %s" % cfg["version"])
     print("Base URL:    %s" % cfg["base_url"])
+
+    info = info_token(cfg)
+    dias = dias_restantes(info["caduca_en"])
+    print("Token:       %s, %s" % (
+        info["tipo"], "no caduca" if dias is None else "caduca en %d dias" % dias))
+
     print("\nAccesos correctos.")
+    if dias is not None and dias <= DIAS_DE_AVISO:
+        print("AVISO: al token le quedan %d dias." % dias)
     return 0
 
 
@@ -386,6 +468,23 @@ def cmd_publicar(args):
             return 0
 
     cfg = config()
+
+    # Si el token cargado es de usuario, caduca. Publicamos con el token de la
+    # pagina, que no caduca, y avisamos de cuanto le queda al de usuario.
+    try:
+        info = info_token(cfg)
+        dias = dias_restantes(info["caduca_en"])
+        if dias is not None:
+            print("Aviso: el token cargado caduca en %d dias." % dias)
+            if dias <= DIAS_DE_AVISO:
+                print("       Renuevalo pronto: ver README, seccion 7.")
+            de_pagina = token_de_pagina(cfg)
+            if de_pagina:
+                cfg["token"] = de_pagina
+                print("       Publicando con el token de la pagina, que no caduca.")
+    except ErrorPublicacion as e:
+        print("Aviso: no se pudo revisar el token (%s). Se sigue igual." % e)
+
     try:
         media_id, historia_id = publicar_set(
             cfg, entrada["set"], dry_run=args.dry_run, sin_historia=args.sin_historia)
@@ -413,6 +512,8 @@ def main():
                    help="publica solo el carrusel, sin la historia")
     p.add_argument("--verificar", action="store_true", help="comprueba token, cuenta y cuota")
     p.add_argument("--estado", action="store_true", help="muestra el calendario de publicacion")
+    p.add_argument("--token-info", action="store_true",
+                   help="que clase de token hay y cuando caduca (nunca lo imprime)")
     p.add_argument("--iniciar", action="store_true", help="crea estado.json desde cero")
     p.add_argument("--respetar-hora", action="store_true",
                    help="solo publica si en Chile es la hora indicada (para el cron con horario de verano)")
@@ -426,6 +527,8 @@ def main():
             return 0
         if args.estado:
             return cmd_estado()
+        if args.token_info:
+            return cmd_token_info(config())
         if args.verificar:
             return cmd_verificar(config())
         return cmd_publicar(args)

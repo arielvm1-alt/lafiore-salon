@@ -31,7 +31,9 @@ lafiore-salon/
 ├── insumos/             material de marca en bruto (no se sube al repo)
 ├── publicar.py          publica un carrusel + su historia vía Graph API
 ├── estado.json          qué set se publicó y cuándo
-└── .github/workflows/publicar.yml   el cron de lunes y miércoles
+└── .github/workflows/
+    ├── publicar.yml     el cron de lunes y miércoles
+    └── salud-token.yml  revisa el token cada lunes y avisa antes de que caduque
 ```
 
 ---
@@ -300,15 +302,44 @@ Run workflow*.
 
 ## 7. Mantención
 
-### Renovar el token antes de los 60 días
+### El token: que deje de caducar
 
-Ponte un recordatorio para el día 50:
+Hay dos clases de token y la diferencia decide si esto necesita mantención:
+
+| Token | Caduca | Sirve para publicar |
+|---|---|---|
+| De **usuario** | a los 60 días | sí |
+| De **página** | **nunca**, si se derivó de uno de usuario de larga duración | sí |
+
+Mientras haya un token de usuario cargado, alguien tiene que renovarlo cada dos
+meses. Con uno de página, no hay nada que renovar.
+
+**Cómo pasar al de página, una sola vez:**
+
+1. En el [Explorador](https://developers.facebook.com/tools/explorer/), con el
+   token de usuario largo cargado, pide:
+
+   ```
+   me/accounts?fields=name,access_token
+   ```
+
+2. En la respuesta, busca la entrada cuyo `name` sea **LaFiore.cl** y copia su
+   `access_token`. Ese es el token de la página.
+3. Pégalo en el secreto `IG_ACCESS_TOKEN`, reemplazando el que había.
+
+Para comprobar qué tienes cargado ahora mismo:
 
 ```bash
-curl -s "https://graph.facebook.com/v26.0/oauth/access_token?grant_type=fb_exchange_token&client_id=TU_APP_ID&client_secret=TU_APP_SECRET&fb_exchange_token=EL_TOKEN_ACTUAL"
+python publicar.py --token-info
 ```
 
-Pega el nuevo valor en el secreto `IG_ACCESS_TOKEN`.
+Responde el tipo, la validez y los días que quedan. **Nunca imprime el token.**
+
+**Mientras tanto no dependes de acordarte.** El workflow *Salud del token de
+Instagram* lo revisa todos los lunes y abre un issue en el repositorio cuando
+quedan 14 días o menos, con el paso a paso para renovarlo. Y al publicar, si el
+token cargado es de usuario, el script deriva solo el de la página para esa
+publicación y avisa cuántos días le quedan al original.
 
 ### Cambiar o añadir contenido
 

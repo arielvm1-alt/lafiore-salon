@@ -1,0 +1,102 @@
+name: Salud del token de Instagram
+
+# El token de Meta caduca. Si nadie lo mira, el primer aviso llega el día que
+# una publicación falla. Esto lo revisa todos los lunes a las 09:00 de Chile y
+# abre un issue cuando quedan pocos días, con tiempo para renovarlo.
+#
+# Nunca imprime el token: solo su tipo, su validez y cuántos días le quedan.
+
+on:
+  schedule:
+    - cron: '0 12 * * 1'     # 09:00 en Chile con horario de verano
+    - cron: '0 13 * * 1'     # 09:00 en Chile con horario de invierno
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+concurrency:
+  group: salud-token
+  cancel-in-progress: false
+
+jobs:
+  revisar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Revisar el token
+        id: revisar
+        continue-on-error: true
+        env:
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          IG_BASE_URL: ${{ secrets.IG_BASE_URL }}
+        run: |
+          set -o pipefail
+          # Sale 0 si el token esta sano, 3 si le quedan pocos dias y 1 si ya
+          # no sirve. Cualquier codigo distinto de 0 marca el paso como fallido
+          # y dispara el aviso del paso siguiente.
+          python publicar.py --token-info 2>&1 | tee salida_token.txt
+
+      - name: Avisar si está por caducar o ya no sirve
+        if: steps.revisar.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let detalle = '(sin salida)';
+            try { detalle = fs.readFileSync('salida_token.txt', 'utf8').slice(-3000); } catch (e) {}
+
+            // Si ya hay un aviso abierto, no abrimos otro cada semana.
+            const abiertos = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'token',
+            });
+            if (abiertos.data.length > 0) {
+              core.info('Ya hay un aviso abierto; no se duplica.');
+              return;
+            }
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: 'El token de Instagram necesita atención',
+              labels: ['token'],
+              body: [
+                'La revisión semanal encontró que el token de `@la_fiore.cl` está por',
+                'caducar o ya no sirve. Mientras no se renueve, las publicaciones de',
+                'los lunes y miércoles van a fallar.',
+                '',
+                '## Cómo renovarlo (5 minutos, sin consola)',
+                '',
+                '1. Explorador de la API Graph: https://developers.facebook.com/tools/explorer/',
+                '   Elige la app **La Fiore Academy Carrusel** y pulsa **Generate Access Token**.',
+                '   Al autorizar, **incluye la página LaFiore.cl**.',
+                '2. Copia ese token y pégalo en el Depurador:',
+                '   https://developers.facebook.com/tools/debug/accesstoken/',
+                '   Pulsa **Depurar** y después **Ampliar token de acceso**.',
+                '3. Pega el token largo en el secreto `IG_ACCESS_TOKEN`:',
+                `   ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/settings/secrets/actions`,
+                '',
+                '## Para que esto no vuelva a pasar',
+                '',
+                'Guarda un **token de página** en vez de uno de usuario: los derivados de',
+                'un token de usuario de larga duración no caducan nunca. Está explicado',
+                'en el README, sección 7.',
+                '',
+                '<details><summary>Salida de la revisión</summary>',
+                '',
+                '```',
+                detalle,
+                '```',
+                '',
+                '</details>',
+              ].join('\n'),
+            });
