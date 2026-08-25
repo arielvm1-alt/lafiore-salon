@@ -4,10 +4,11 @@
   "sets": [
     {
       "set": "set_01",
-      "estado": "pendiente",
-      "publicado_en": null,
-      "media_id": null,
-      "intentos": 0
+      "estado": "publicado",
+      "publicado_en": "2026-08-25T00:07:42+0000",
+      "media_id": "18124430146866994",
+      "intentos": 0,
+      "historia_media_id": "18032781446835144"
     },
     {
       "set": "set_02",
