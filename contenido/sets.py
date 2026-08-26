@@ -443,8 +443,8 @@ SETS = [
         "cierre": {
             "ante": "Tu próxima visita",
             "plazo": "Cada 8 a 12 semanas",
-            "detalle": "Despunte, corte y tratamiento. "
-                       "Para cabello muy trabajado, **Olaplex** y la laminación biomimética.",
+            "detalle": "Despunte, corte y tratamiento. Para cabello muy trabajado, "
+                       "**Olaplex** y **Marina Vital**, la línea en base a algas.",
             "cta": "Agenda tu despunte",
             "sub": "Si tienes color, hazlo coincidir con el retoque y ahorras una visita.",
         },
