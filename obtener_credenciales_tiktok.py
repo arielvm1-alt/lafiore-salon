@@ -87,6 +87,23 @@ def al_portapapeles(texto):
         return False
 
 
+def _del_portapapeles():
+    """Lo que haya en el portapapeles, en una linea. Cadena vacia si no se puede."""
+    try:
+        if sys.platform == "win32":
+            orden = ["powershell", "-NoProfile", "-Command", "Get-Clipboard -Raw"]
+        elif sys.platform == "darwin":
+            orden = ["pbpaste"]
+        else:
+            orden = ["xclip", "-selection", "clipboard", "-o"]
+        salida = subprocess.run(orden, capture_output=True, timeout=15)
+        texto = salida.stdout.decode("utf-8", "replace")
+    except Exception:
+        return ""
+    # Un token no tiene saltos de linea ni espacios alrededor.
+    return texto.replace("\r", "").replace("\n", "").strip()
+
+
 def pedir_oculto(etiqueta):
     """Lee una clave mostrando un asterisco por caracter.
 
@@ -109,6 +126,15 @@ def pedir_oculto(etiqueta):
                 break
             if ch == "\x03":                     # Ctrl+C
                 raise KeyboardInterrupt
+            if ch == "\x16":                     # Ctrl+V
+                # Leyendo tecla a tecla, Ctrl+V no pega: llega como un solo
+                # caracter de control. Asi que vamos a buscar el portapapeles.
+                pegado = _del_portapapeles()
+                if pegado:
+                    letras.extend(pegado)
+                    sys.stdout.write("*" * len(pegado))
+                    sys.stdout.flush()
+                continue
             if ch in ("\x00", "\xe0"):           # flechas y teclas especiales
                 msvcrt.getwch()
                 continue
@@ -117,6 +143,8 @@ def pedir_oculto(etiqueta):
                     letras.pop()
                     sys.stdout.write("\b \b")
                     sys.stdout.flush()
+                continue
+            if ch < " ":                         # cualquier otro control
                 continue
             letras.append(ch)
             sys.stdout.write("*")
