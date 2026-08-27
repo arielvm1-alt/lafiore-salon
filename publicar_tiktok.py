@@ -100,6 +100,9 @@ def config():
         "client_secret": os.environ["TIKTOK_CLIENT_SECRET"].strip(),
         "refresh_token": os.environ["TIKTOK_REFRESH_TOKEN"].strip(),
         "base_url": os.environ["TIKTOK_BASE_URL"].strip().rstrip("/"),
+        # "borrador" manda al buzon (default). "directo" publica sin pasar por
+        # el telefono; mientras TikTok no audite la app, sale en privado.
+        "modo": os.environ.get("TIKTOK_MODO", "borrador").strip().lower(),
     }
 
 
@@ -156,6 +159,10 @@ def _pista(detalle):
             "vuelve a autorizar.",
         "rate_limit_exceeded":
             "Demasiados envios seguidos. Espera y reintenta.",
+        "unaudited_client_can_only_post_to_private_accounts":
+            "El post directo publico requiere que TikTok audite la app. Mientras "
+            "tanto, usa el modo borrador (TIKTOK_MODO=borrador o sin definir). "
+            "Este error NO se arregla reintentando.",
     }
     extra = ayudas.get(codigo, "")
     return "%s (%s)%s" % (mensaje, codigo, "\n  -> " + extra if extra else "")
@@ -169,7 +176,7 @@ def _con_reintento(descripcion, fn):
             return fn()
         except ErrorTikTok as e:
             ultimo = e
-            if intento == REINTENTOS:
+            if "NO se arregla reintentando" in str(e) or intento == REINTENTOS:
                 break
             print("   ! %s fallo (intento %d/%d): %s" % (descripcion, intento, REINTENTOS, e))
             print("     reintento en %ds" % espera)
@@ -204,7 +211,13 @@ def cmd_verificar(cfg):
     usuario = (datos.get("data") or {}).get("user") or {}
     print("Cuenta:     %s" % usuario.get("display_name", "?"))
     print("Base URL:   %s" % cfg["base_url"])
-    print("Modo:       MEDIA_UPLOAD (llega al buzon, se publica desde el telefono)")
+    if cfg.get("modo") == "directo":
+        creador = info_creador(token)
+        opciones = creador.get("privacy_level_options") or []
+        print("Modo:       DIRECT_POST (publica sin intervencion)")
+        print("Privacidades disponibles: %s" % (opciones or "?"))
+    else:
+        print("Modo:       MEDIA_UPLOAD (llega al buzon, se publica desde el telefono)")
 
     faltan = [u for u in urls_de(cfg, "set_01") if not _url_viva(u)]
     if faltan:
@@ -270,6 +283,28 @@ def siguiente_pendiente(estado):
 # envio
 # --------------------------------------------------------------------------
 
+def info_creador(token):
+    """Consulta obligatoria antes de un post directo.
+
+    Devuelve las opciones reales del creador: privacidades disponibles y si
+    puede recibir posts ahora. TikTok exige hacer esta consulta antes de cada
+    publicacion directa; saltarsela es ademas causal de rechazo en auditoria.
+    """
+    datos = _peticion(API + "/post/publish/creator_info/query/", {},
+                      cabeceras={"Authorization": "Bearer " + token},
+                      json_body=True)
+    return datos.get("data") or {}
+
+
+def elegir_privacidad(opciones):
+    """La mas publica que el creador tenga disponible."""
+    for nivel in ("PUBLIC_TO_EVERYONE", "MUTUAL_FOLLOW_FRIENDS", "FOLLOWER_OF_CREATOR",
+                  "SELF_ONLY"):
+        if nivel in opciones:
+            return nivel
+    return "SELF_ONLY"
+
+
 def urls_de(cfg, nombre_set):
     urls = []
     for lam in LAMINAS:
@@ -304,18 +339,28 @@ def enviar_set(cfg, nombre_set, dry_run=False):
 
     token = token_de_acceso(cfg)
 
+    directo = cfg.get("modo") == "directo"
+    post_info = {"title": texto[:90], "description": texto}
+    if directo:
+        creador = info_creador(token)
+        opciones = creador.get("privacy_level_options") or []
+        privacidad = elegir_privacidad(opciones)
+        post_info["privacy_level"] = privacidad
+        post_info["disable_comment"] = False
+        print("   Modo directo. Privacidades disponibles: %s" % (opciones or "?"))
+        print("   Se publica con: %s" % privacidad)
+        if privacidad == "SELF_ONLY":
+            print("   OJO: saldra en privado. Es el limite de una app sin auditar.")
+
     def hacer():
         return _peticion(API + "/post/publish/content/init/", {
-            "post_info": {
-                "title": texto[:90],
-                "description": texto,
-            },
+            "post_info": post_info,
             "source_info": {
                 "source": "PULL_FROM_URL",
                 "photo_cover_index": 0,
                 "photo_images": urls,
             },
-            "post_mode": "MEDIA_UPLOAD",
+            "post_mode": "DIRECT_POST" if directo else "MEDIA_UPLOAD",
             "media_type": "PHOTO",
         }, cabeceras={"Authorization": "Bearer " + token}, json_body=True)
 
@@ -324,8 +369,11 @@ def enviar_set(cfg, nombre_set, dry_run=False):
     if not publish_id:
         raise ErrorTikTok("TikTok no devolvio publish_id: %s" % json.dumps(datos)[:300])
 
-    print("   ENVIADO. publish_id = %s" % publish_id)
-    print("   Revisa la notificacion en la app de TikTok para publicarlo.")
+    if directo:
+        print("   PUBLICADO DIRECTO. publish_id = %s" % publish_id)
+    else:
+        print("   ENVIADO. publish_id = %s" % publish_id)
+        print("   Revisa la notificacion en la app de TikTok para publicarlo.")
     return publish_id
 
 

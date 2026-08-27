@@ -37,7 +37,10 @@ import webbrowser
 # Se usa una pagina estatica del propio sitio: recibe el codigo, lo muestra
 # y lo copia al portapapeles para pegarlo aqui.
 REDIRECT = "https://arielvm1-alt.github.io/lafiore-salon/autorizado.html"
-AMBITOS = "user.info.basic,video.upload"
+# video.publish es el permiso del Direct Post: publicar sin pasar por el
+# buzon. Mientras TikTok no audite la app, lo publicado asi queda en
+# privado; se pide desde ya para poder probarlo y grabar el demo.
+AMBITOS = "user.info.basic,video.upload,video.publish"
 AUTORIZAR = "https://www.tiktok.com/v2/auth/authorize/"
 TOKEN = "https://open.tiktokapis.com/v2/oauth/token/"
 
