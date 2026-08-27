@@ -449,12 +449,60 @@ def hora_chilena_correcta(objetivo=12):
     return ahora.hour == objetivo
 
 
-def cmd_publicar(args):
-    if args.respetar_hora and not hora_chilena_correcta(args.hora):
-        print("No son las %d:00 en Chile. Esta ejecucion no publica." % args.hora)
-        return 0
+def fecha_chilena():
+    """El dia de hoy en Santiago, o None si no se puede saber."""
+    try:
+        from zoneinfo import ZoneInfo
+        from datetime import datetime
+        return datetime.now(ZoneInfo("America/Santiago")).date()
+    except Exception:
+        return None
 
+
+def ya_se_publico_hoy(estado):
+    """True si algun set ya se publico hoy, en fecha de Chile.
+
+    Este es el candado de verdad. El cron corre dos veces al dia a proposito
+    (por el cambio de hora) y GitHub Actions no respeta el horario exacto: se
+    atrasa segun su carga. Un 26 de agosto la ejecucion de las 15:00 UTC llego
+    tarde y cayo dentro de la hora objetivo, asi que publicaron las dos y se
+    gastaron dos sets. Comprobar la fecha lo hace imposible.
+    """
+    hoy = fecha_chilena()
+    if hoy is None:
+        return False
+    from datetime import datetime
+    for s in estado["sets"]:
+        marca = s.get("publicado_en")
+        if not marca:
+            continue
+        try:
+            cuando = datetime.strptime(marca, "%Y-%m-%dT%H:%M:%S%z")
+        except ValueError:
+            continue
+        try:
+            from zoneinfo import ZoneInfo
+            local = cuando.astimezone(ZoneInfo("America/Santiago")).date()
+        except Exception:
+            continue
+        if local == hoy:
+            print("Hoy (%s en Chile) ya se publico %s. Esta ejecucion no publica."
+                  % (hoy.isoformat(), s["set"]))
+            return True
+    return False
+
+
+def cmd_publicar(args):
     estado = cargar_estado()
+
+    # Solo el cron pasa --respetar-hora. Una ejecucion a mano publica siempre,
+    # que para eso se lanza a mano.
+    if args.respetar_hora:
+        if ya_se_publico_hoy(estado):
+            return 0
+        if not hora_chilena_correcta(args.hora):
+            print("No son las %d:00 en Chile. Esta ejecucion no publica." % args.hora)
+            return 0
 
     if args.set:
         nombre = "set_%02d" % args.set

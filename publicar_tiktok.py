@@ -328,8 +328,37 @@ def cmd_estado():
     return 0
 
 
+def ya_se_envio_hoy(estado):
+    """True si hoy, en fecha de Chile, ya se mando un set al buzon."""
+    try:
+        from zoneinfo import ZoneInfo
+        from datetime import datetime
+        hoy = datetime.now(ZoneInfo("America/Santiago")).date()
+    except Exception:
+        return False
+    from datetime import datetime
+    for s in estado["sets"]:
+        marca = s.get("enviado_en")
+        if not marca:
+            continue
+        try:
+            cuando = datetime.strptime(marca, "%Y-%m-%dT%H:%M:%S%z")
+            from zoneinfo import ZoneInfo as Z
+            if cuando.astimezone(Z("America/Santiago")).date() == hoy:
+                print("Hoy ya se envio %s a TikTok. No se envia otro." % s["set"])
+                return True
+        except Exception:
+            continue
+    return False
+
+
 def cmd_enviar(args):
     estado = cargar_estado()
+
+    # Mismo candado que en Instagram: un envio por dia como maximo, salvo que
+    # se pida un set concreto a mano.
+    if not args.set and not args.dry_run and ya_se_envio_hoy(estado):
+        return 0
 
     if args.set:
         nombre = "set_%02d" % args.set
