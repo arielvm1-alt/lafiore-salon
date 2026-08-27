@@ -13,6 +13,7 @@ on:
     branches: [main]
     paths:
       - 'salida/**'
+      - 'buzon/entrada/**'
       - 'verificacion/**'
       - 'web/**'
       - '.github/workflows/paginas.yml'
@@ -45,6 +46,8 @@ jobs:
         run: |
           mkdir -p sitio
           cp -r salida sitio/salida
+          # El buzón de réplica a TikTok también se sirve desde aquí.
+          if [ -d buzon/entrada ]; then cp -r buzon/entrada sitio/buzon; fi
           # Los archivos de verificación de TikTok van en la raíz del sitio.
           if [ -d verificacion ]; then cp -r verificacion/. sitio/; fi
           # Términos, privacidad e icono: los pide la revisión de TikTok.

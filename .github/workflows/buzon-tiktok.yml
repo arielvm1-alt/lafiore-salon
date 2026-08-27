@@ -1,0 +1,131 @@
+name: Buzon TikTok
+
+# Replica en TikTok lo que caiga en la carpeta "Buzon TikTok" de Google Drive
+# (o directamente en buzon/entrada/ del repo). Cada pasada:
+#   1. baja lo nuevo de Drive con rclone,
+#   2. lo renombra a nombres seguros de URL y lo sube al repo,
+#   3. despliega GitHub Pages para que TikTok pueda descargar los archivos
+#      (estan bajo el prefijo verificado del sitio),
+#   4. envia cada carpeta como borrador al buzon de TikTok (MEDIA_UPLOAD),
+#   5. deja "ENVIADO A TIKTOK.txt" en la carpeta de Drive y guarda el estado.
+#
+# Se despliega Pages desde aqui (y no confiando en paginas.yml) porque los
+# push hechos con GITHUB_TOKEN no disparan otros workflows.
+
+on:
+  schedule:
+    - cron: '*/20 * * * *'
+  push:
+    branches: [main]
+    paths:
+      - 'buzon/entrada/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: buzon-tiktok
+  cancel-in-progress: false
+
+jobs:
+  replicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bajar lo nuevo de Google Drive
+        env:
+          RCLONE_CONF: ${{ secrets.RCLONE_CONF }}
+        run: |
+          if [ -z "$RCLONE_CONF" ]; then
+            echo "No hay secreto RCLONE_CONF: se salta Drive y se procesa" \
+                 "solo lo que ya este en buzon/entrada/."
+            exit 0
+          fi
+          sudo apt-get update -qq && sudo apt-get install -y -qq rclone
+          mkdir -p ~/.config/rclone
+          printf '%s' "$RCLONE_CONF" > ~/.config/rclone/rclone.conf
+          mkdir -p buzon/entrada
+          # Las carpetas ya procesadas se renombraron en el repo: sin este
+          # filtro rclone las volveria a bajar con su nombre original de
+          # Drive y se enviarian dos veces.
+          python3 buzon/publicar_buzon.py --filtros-rclone > /tmp/filtros.txt
+          cat /tmp/filtros.txt
+          rclone copy "gdrive:Buzon TikTok" buzon/entrada \
+            --filter-from /tmp/filtros.txt --transfers 4 -v
+
+      - name: Preparar lo pendiente (nombres de URL)
+        id: preparar
+        run: |
+          python3 buzon/publicar_buzon.py --preparar | tee preparar.log
+          LISTOS=$(grep -oP 'Listos para enviar: \K\d+' preparar.log || echo 0)
+          echo "listos=$LISTOS" >> "$GITHUB_OUTPUT"
+
+      - name: Subir la entrada al repo
+        id: subir
+        run: |
+          git config user.name  "buzon-tiktok"
+          git config user.email "actions@github.com"
+          git add buzon/entrada buzon/estado_buzon.json
+          if git diff --cached --quiet; then
+            echo "cambios=no" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "buzon: material nuevo para TikTok"
+            git pull --rebase origin main
+            git push origin main
+            echo "cambios=si" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ---- despliegue de Pages (mismo armado que paginas.yml + el buzon) ----
+      - name: Armar el sitio
+        if: steps.preparar.outputs.listos != '0'
+        run: |
+          mkdir -p sitio
+          cp -r salida sitio/salida
+          if [ -d buzon/entrada ]; then cp -r buzon/entrada sitio/buzon; fi
+          if [ -d verificacion ]; then cp -r verificacion/. sitio/; fi
+          if [ -d web ]; then cp -r web/. sitio/; fi
+          touch sitio/.nojekyll
+          cat > sitio/index.html <<'FIN'
+          <!doctype html><meta charset="utf-8">
+          <title>La Fiore · assets</title>
+          <p>Carpeta de imágenes de las publicaciones de La Fiore.</p>
+          FIN
+
+      - name: Encender Pages si hace falta
+        if: steps.preparar.outputs.listos != '0'
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        if: steps.preparar.outputs.listos != '0'
+        with:
+          path: sitio
+
+      - name: Desplegar Pages
+        if: steps.preparar.outputs.listos != '0'
+        uses: actions/deploy-pages@v4
+
+      # ---- envio a TikTok ----
+      - name: Enviar al buzon de TikTok
+        if: steps.preparar.outputs.listos != '0'
+        env:
+          TIKTOK_CLIENT_KEY: ${{ secrets.TIKTOK_CLIENT_KEY }}
+          TIKTOK_CLIENT_SECRET: ${{ secrets.TIKTOK_CLIENT_SECRET }}
+          TIKTOK_REFRESH_TOKEN: ${{ secrets.TIKTOK_REFRESH_TOKEN }}
+          BUZON_RCLONE_REMOTE: ${{ secrets.RCLONE_CONF != '' && 'gdrive:Buzon TikTok' || '' }}
+        run: python3 buzon/publicar_buzon.py
+
+      - name: Guardar el estado
+        if: always() && steps.preparar.outputs.listos != '0'
+        run: |
+          git add buzon/estado_buzon.json
+          if ! git diff --cached --quiet; then
+            git commit -m "buzon: estado tras el envio a TikTok"
+            git pull --rebase origin main
+            git push origin main
+          fi
