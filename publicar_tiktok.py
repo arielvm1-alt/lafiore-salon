@@ -65,7 +65,29 @@ class ErrorTikTok(Exception):
 # configuracion
 # --------------------------------------------------------------------------
 
+CREDENCIALES = os.path.join(RAIZ, "credenciales_tiktok.txt")
+
+
+def _del_archivo_local():
+    """Carga credenciales_tiktok.txt si existe, para poder ensayar en local.
+
+    En GitHub Actions las credenciales llegan por variables de entorno y este
+    archivo no existe: esta en .gitignore y nunca se sube. Sirve solo para
+    probar desde el computador sin exportar nada a mano.
+    """
+    if not os.path.exists(CREDENCIALES):
+        return
+    with open(CREDENCIALES, encoding="utf-8") as f:
+        for linea in f:
+            linea = linea.strip()
+            if not linea or linea.startswith("#") or "=" not in linea:
+                continue
+            clave, valor = linea.split("=", 1)
+            os.environ.setdefault(clave.strip(), valor.strip())
+
+
 def config():
+    _del_archivo_local()
     faltan = [k for k in ("TIKTOK_CLIENT_KEY", "TIKTOK_CLIENT_SECRET",
                           "TIKTOK_REFRESH_TOKEN", "TIKTOK_BASE_URL")
               if not os.environ.get(k)]

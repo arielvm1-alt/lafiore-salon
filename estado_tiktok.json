@@ -4,10 +4,10 @@
   "sets": [
     {
       "set": "set_01",
-      "estado": "pendiente",
+      "estado": "error",
       "enviado_en": null,
       "publish_id": null,
-      "intentos": 0
+      "intentos": 1
     },
     {
       "set": "set_02",
