@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Autorización recibida · La Fiore</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { margin:0 auto; max-width:38rem; padding:4rem 1.5rem;
+         font:17px/1.65 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+         background:#EDE9D1; color:#15181A; }
+  @media (prefers-color-scheme: dark) { body { background:#15181A; color:#EDE9D1; } }
+  h1 { font-size:1.7rem; margin:0 0 .4rem; }
+  p  { margin:0 0 1.2rem; }
+  .tenue { color:#6B6656; }
+  @media (prefers-color-scheme: dark) { .tenue { color:#9A9583; } }
+  .caja { background:#F6F3E5; border:2px solid rgba(21,24,26,.2); padding:1.1rem 1.2rem;
+          margin:1.5rem 0; }
+  @media (prefers-color-scheme: dark) { .caja { background:#1F2326; border-color:rgba(237,233,209,.2); } }
+  code { font-family:Consolas, "Courier New", monospace; font-size:.95rem;
+         word-break:break-all; display:block; margin-top:.5rem; }
+  button { font:inherit; font-weight:600; padding:.6rem 1.2rem; border:none; cursor:pointer;
+           background:#90651F; color:#fff; }
+  @media (prefers-color-scheme: dark) { button { background:#E1C58F; color:#15181A; } }
+  .error { color:#8C3A21; }
+  @media (prefers-color-scheme: dark) { .error { color:#E0917A; } }
+</style>
+</head>
+<body>
+
+<h1>Autorización recibida</h1>
+<p class="tenue">La Fiore · Studio and Barber Shop</p>
+
+<div id="salida"></div>
+
+<script>
+(function () {
+  var q = new URLSearchParams(location.search);
+  var code = q.get("code");
+  var err = q.get("error") || q.get("error_description");
+  var out = document.getElementById("salida");
+
+  if (err) {
+    out.innerHTML = '<p class="error"><strong>TikTok devolvió un error:</strong> ' +
+      String(err).replace(/[<>&]/g, "") + '</p>' +
+      '<p>Vuelve a ejecutar <code>obtener_credenciales_tiktok.py</code> e inténtalo de nuevo.</p>';
+    return;
+  }
+  if (!code) {
+    out.innerHTML = '<p>Esta página es el punto de retorno de la autorización de TikTok. ' +
+      'No hay nada que hacer aquí a menos que vengas del proceso de autorización.</p>';
+    return;
+  }
+
+  out.innerHTML =
+    '<p>Listo. Copia este código y pégalo en la consola, donde el script te lo pide.</p>' +
+    '<div class="caja"><strong>Código de autorización</strong><code id="c"></code></div>' +
+    '<button id="b" type="button">Copiar código</button>' +
+    '<p class="tenue" style="margin-top:1.5rem">El código dura pocos minutos. Si se vence, ' +
+    'vuelve a ejecutar el script y autoriza otra vez.</p>';
+  document.getElementById("c").textContent = code;
+
+  document.getElementById("b").addEventListener("click", function () {
+    var b = this;
+    function ok() { b.textContent = "Copiado"; setTimeout(function () { b.textContent = "Copiar código"; }, 2000); }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(code).then(ok, respaldo);
+    } else { respaldo(); }
+    function respaldo() {
+      var t = document.createElement("textarea");
+      t.value = code; document.body.appendChild(t); t.select();
+      try { document.execCommand("copy"); ok(); } catch (e) { b.textContent = "Selecciónalo a mano"; }
+      document.body.removeChild(t);
+    }
+  });
+})();
+</script>
+</body>
+</html>
