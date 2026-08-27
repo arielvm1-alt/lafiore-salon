@@ -227,6 +227,8 @@ def render_sets(ids=None):
     os.makedirs(SALIDA, exist_ok=True)
     with open(os.path.join(SALIDA, "captions.json"), "w", encoding="utf-8") as f:
         json.dump(textos_caption.captions(), f, ensure_ascii=False, indent=2)
+    with open(os.path.join(SALIDA, "captions_tiktok.json"), "w", encoding="utf-8") as f:
+        json.dump(textos_caption.captions_tiktok(), f, ensure_ascii=False, indent=2)
 
     print("\n%d laminas generadas." % generados)
     if fallos:

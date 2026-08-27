@@ -2,6 +2,7 @@ __pycache__/
 *.pyc
 .env
 credenciales.txt
+credenciales_tiktok.txt
 
 # Material de marca en bruto: PDFs, .ai, zips y fuentes originales.
 # Vive solo en tu computador. Lo que el proyecto necesita ya esta

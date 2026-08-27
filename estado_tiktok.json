@@ -1,0 +1,76 @@
+{
+  "destino": "TikTok · @la_fiore.cl",
+  "modo": "MEDIA_UPLOAD: llega al buzon y se publica desde el telefono",
+  "sets": [
+    {
+      "set": "set_01",
+      "estado": "pendiente",
+      "enviado_en": null,
+      "publish_id": null,
+      "intentos": 0
+    },
+    {
+      "set": "set_02",
+      "estado": "pendiente",
+      "enviado_en": null,
+      "publish_id": null,
+      "intentos": 0
+    },
+    {
+      "set": "set_03",
+      "estado": "pendiente",
+      "enviado_en": null,
+      "publish_id": null,
+      "intentos": 0
+    },
+    {
+      "set": "set_04",
+      "estado": "pendiente",
+      "enviado_en": null,
+      "publish_id": null,
+      "intentos": 0
+    },
+    {
+      "set": "set_05",
+      "estado": "pendiente",
+      "enviado_en": null,
+      "publish_id": null,
+      "intentos": 0
+    },
+    {
+      "set": "set_06",
+      "estado": "pendiente",
+      "enviado_en": null,
+      "publish_id": null,
+      "intentos": 0
+    },
+    {
+      "set": "set_07",
+      "estado": "pendiente",
+      "enviado_en": null,
+      "publish_id": null,
+      "intentos": 0
+    },
+    {
+      "set": "set_08",
+      "estado": "pendiente",
+      "enviado_en": null,
+      "publish_id": null,
+      "intentos": 0
+    },
+    {
+      "set": "set_09",
+      "estado": "pendiente",
+      "enviado_en": null,
+      "publish_id": null,
+      "intentos": 0
+    },
+    {
+      "set": "set_10",
+      "estado": "pendiente",
+      "enviado_en": null,
+      "publish_id": null,
+      "intentos": 0
+    }
+  ]
+}

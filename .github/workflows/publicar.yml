@@ -68,16 +68,41 @@ jobs:
           fi
           python publicar.py $ARGS 2>&1 | tee salida_publicacion.txt
 
+      # TikTok va despues de Instagram y a proposito NO corta la ejecucion si
+      # falla: el carrusel de Instagram ya salio y no queremos perder ese
+      # registro por un problema del otro canal.
+      - name: Enviar el carrusel al buzon de TikTok
+        if: steps.publicar.outcome == 'success'
+        continue-on-error: true
+        env:
+          TIKTOK_CLIENT_KEY: ${{ secrets.TIKTOK_CLIENT_KEY }}
+          TIKTOK_CLIENT_SECRET: ${{ secrets.TIKTOK_CLIENT_SECRET }}
+          TIKTOK_REFRESH_TOKEN: ${{ secrets.TIKTOK_REFRESH_TOKEN }}
+          TIKTOK_BASE_URL: ${{ secrets.TIKTOK_BASE_URL }}
+        run: |
+          if [ -z "$TIKTOK_CLIENT_KEY" ]; then
+            echo "TikTok sin configurar todavia: me lo salto."
+            exit 0
+          fi
+          ARGS=""
+          if [ -n "${{ github.event.inputs.set }}" ]; then
+            ARGS="--set ${{ github.event.inputs.set }}"
+          fi
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            ARGS="$ARGS --dry-run"
+          fi
+          python publicar_tiktok.py $ARGS
+
       - name: Guardar estado.json actualizado
         if: always()
         run: |
-          if git diff --quiet -- estado.json; then
-            echo "estado.json sin cambios."
+          if git diff --quiet -- estado.json estado_tiktok.json; then
+            echo "Sin cambios de estado."
             exit 0
           fi
           git config user.name  "La Fiore bot"
           git config user.email "actions@github.com"
-          git add estado.json
+          git add estado.json estado_tiktok.json
           git commit -m "estado: registro de publicación automática"
           git push
 

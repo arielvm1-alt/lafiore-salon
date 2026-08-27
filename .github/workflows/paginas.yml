@@ -1,0 +1,64 @@
+name: Publicar salida en GitHub Pages
+
+# TikTok solo descarga fotos desde una URL cuya propiedad hayas verificado, y
+# raw.githubusercontent.com no es nuestro. GitHub Pages sí: sirve el contenido
+# bajo https://<usuario>.github.io/<repo>/, y esa ruta se puede verificar en el
+# portal de TikTok con el archivo de firma que ellos entregan.
+#
+# Este workflow enciende Pages solo (enablement: true) y publica la carpeta
+# salida/ junto con el archivo de verificación. No cuesta nada.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'salida/**'
+      - 'verificacion/**'
+      - '.github/workflows/paginas.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: paginas
+  cancel-in-progress: true
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.desplegar.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Encender Pages si hace falta
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Armar el sitio
+        run: |
+          mkdir -p sitio
+          cp -r salida sitio/salida
+          # Los archivos de verificación de TikTok van en la raíz del sitio.
+          if [ -d verificacion ]; then cp -r verificacion/. sitio/; fi
+          # Sin esto, GitHub Pages ignora carpetas que empiezan con guion bajo.
+          touch sitio/.nojekyll
+          cat > sitio/index.html <<'FIN'
+          <!doctype html><meta charset="utf-8">
+          <title>La Fiore · assets</title>
+          <p>Carpeta de imágenes de las publicaciones de La Fiore.</p>
+          FIN
+          echo "Archivos servidos:"; find sitio -type f | wc -l
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: sitio
+
+      - name: Desplegar
+        id: desplegar
+        uses: actions/deploy-pages@v4

@@ -121,6 +121,38 @@ def captions():
     return {"set_%02d" % i: caption(i) for i in sorted(CUERPOS)}
 
 
+# --------------------------------------------------------------------------
+# TikTok
+# --------------------------------------------------------------------------
+# El mismo cuerpo, otros hashtags. En Instagram el hashtag es sobre todo local
+# —quien busca salon en Talagante—; en TikTok es de descubrimiento y la gente
+# llega por tema, no por barrio. Y el pie no lleva ubicacion: en TikTok el
+# perfil ya la muestra y ocupa lineas que tapan la lamina.
+
+CIERRE_TIKTOK = "Agenda en @la_fiore.cl"
+
+HASHTAGS_TIKTOK = {
+    "unas": "#unas #manicure #esmaltadopermanente #softgel #tipsdeunas #chile",
+    "cabello": "#cabello #cuidadocapilar #color #balayage #tipsdecabello #chile",
+    "barba": "#barba #barberia #cuidadodelabarba #barbershop #hombres #chile",
+    "corte": "#corte #barberia #degradado #cortedepelo #hombres #chile",
+    "pies": "#pedicure #cuidadodelospies #spadepies #tips #chile",
+    "piel": "#piel #limpiezafacial #skincare #cosmetologia #cuidadodelapiel #chile",
+    "mirada": "#pestanas #cejas #liftingdepestanas #mirada #belleza #chile",
+    "masaje": "#masaje #descontracturante #bienestar #relajacion #autocuidado #chile",
+}
+
+
+def caption_tiktok(set_id):
+    cuerpo, publico = CUERPOS[set_id]
+    return "%s\n\n%s\n%s" % (cuerpo, CIERRE_TIKTOK, HASHTAGS_TIKTOK[publico])
+
+
+def captions_tiktok():
+    """Dict listo para serializar a captions_tiktok.json."""
+    return {"set_%02d" % i: caption_tiktok(i) for i in sorted(CUERPOS)}
+
+
 MAX_CAPTION = 2200          # limite duro de Instagram
 
 
@@ -132,7 +164,13 @@ def validar():
             errores.append("set_%02d: caption de %d caracteres (max %d)"
                            % (i, len(t), MAX_CAPTION))
         if CUERPOS[i][1] not in HASHTAGS:
-            errores.append("set_%02d: publico sin hashtags" % i)
+            errores.append("set_%02d: publico sin hashtags de Instagram" % i)
+        if CUERPOS[i][1] not in HASHTAGS_TIKTOK:
+            errores.append("set_%02d: publico sin hashtags de TikTok" % i)
+        t = caption_tiktok(i)
+        if len(t) > MAX_CAPTION:
+            errores.append("set_%02d: caption de TikTok de %d caracteres (max %d)"
+                           % (i, len(t), MAX_CAPTION))
     return errores
 
 
