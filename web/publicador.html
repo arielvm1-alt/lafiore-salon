@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Publicador · La Fiore Salon Carrusel</title>
+<style>
+  :root {
+    --negro:#15181A; --hueso:#EDE9D1; --panel:#F6F3E5; --hundido:#E2DCC3;
+    --tinta:#15181A; --tenue:#6B6656; --regla:rgba(21,24,26,.22);
+    --dorado:#90651F; --alerta:#8C3A21; --ok:#3F6B3A;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0 auto; max-width:46rem; padding:2.2rem 1.2rem 5rem;
+         background:var(--hueso); color:var(--tinta);
+         font:16px/1.6 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  header { display:flex; align-items:center; gap:14px; padding-bottom:16px;
+           border-bottom:3px solid var(--tinta); margin-bottom:22px; }
+  header img { width:56px; height:56px; }
+  header h1 { font-size:1.35rem; margin:0; line-height:1.2; }
+  header p { margin:0; color:var(--tenue); font-size:.85rem; }
+  section { background:var(--panel); border:2px solid var(--regla);
+            padding:18px 20px; margin-bottom:16px; }
+  section h2 { font-size:1rem; margin:0 0 10px; letter-spacing:.06em;
+               text-transform:uppercase; color:var(--dorado); }
+  label { display:block; font-weight:600; margin:12px 0 4px; font-size:.92rem; }
+  input[type=text], select, textarea {
+    width:100%; padding:9px 10px; font:inherit; border:2px solid var(--regla);
+    background:#fff; border-radius:2px; }
+  textarea { min-height:110px; resize:vertical; }
+  button { font:inherit; font-weight:700; padding:10px 18px; border:0;
+           border-radius:2px; cursor:pointer; background:var(--dorado); color:#fff; }
+  button.secundario { background:var(--tinta); }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  .fila { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .perfil { display:flex; align-items:center; gap:12px; }
+  .perfil img { width:48px; height:48px; border-radius:50%;
+                border:2px solid var(--regla); background:#fff; }
+  .laminas { display:flex; gap:8px; overflow-x:auto; padding:6px 0; }
+  .laminas img { height:150px; border:2px solid var(--regla); }
+  .aviso { padding:10px 12px; border-left:4px solid var(--dorado);
+           background:var(--hundido); font-size:.9rem; margin-top:10px; }
+  .estado { white-space:pre-wrap; font-family:Consolas,monospace; font-size:.85rem;
+            background:var(--hundido); padding:10px 12px; margin-top:10px;
+            min-height:2.2em; }
+  .ok { color:var(--ok); font-weight:700; }
+  .mal { color:var(--alerta); font-weight:700; }
+  .check { display:flex; gap:10px; align-items:flex-start; margin-top:12px;
+           font-size:.9rem; }
+  .check input { margin-top:4px; width:auto; }
+  a { color:var(--dorado); }
+  .oculto { display:none; }
+</style>
+</head>
+<body>
+
+<header>
+  <img src="icono-app.png" alt="La Fiore">
+  <div>
+    <h1>La Fiore Salon Carrusel</h1>
+    <p>Publicador interno · envía los carruseles del salón a su cuenta de TikTok</p>
+  </div>
+</header>
+
+<!-- 1 · conexión -->
+<section id="sec-conexion">
+  <h2>1 · Cuenta de TikTok</h2>
+  <div id="sin-conexion">
+    <p>Autoriza la aplicación con la cuenta del salón. Se abre TikTok, aceptas los
+    permisos y vuelves con un código.</p>
+    <div class="fila">
+      <button id="btn-conectar" type="button">Conectar con TikTok</button>
+      <input type="text" id="codigo" placeholder="Pega aquí el código de autorización"
+             style="flex:1; min-width:220px">
+      <button id="btn-canjear" type="button" class="secundario">Canjear código</button>
+    </div>
+  </div>
+  <div id="con-conexion" class="perfil oculto">
+    <img id="perfil-foto" alt="">
+    <div>
+      <div id="perfil-nombre" style="font-weight:700"></div>
+      <div style="color:var(--tenue); font-size:.85rem">Cuenta autorizada</div>
+    </div>
+  </div>
+  <div class="estado" id="estado-conexion">Sin conectar.</div>
+</section>
+
+<!-- 2 · contenido -->
+<section>
+  <h2>2 · Contenido</h2>
+  <label for="set">Carrusel a publicar</label>
+  <select id="set"></select>
+  <div class="laminas" id="laminas"></div>
+  <label for="texto">Texto de la publicación</label>
+  <textarea id="texto"></textarea>
+</section>
+
+<!-- 3 · opciones de publicación -->
+<section>
+  <h2>3 · Opciones de publicación</h2>
+
+  <label for="privacidad">¿Quién puede ver esta publicación?</label>
+  <!-- Sin valor por defecto: lo exigen las reglas de integración de TikTok. -->
+  <select id="privacidad">
+    <option value="" selected disabled>Elige la visibilidad…</option>
+  </select>
+
+  <div class="check">
+    <input type="checkbox" id="permitir-comentarios" checked>
+    <label for="permitir-comentarios" style="margin:0">Permitir comentarios</label>
+  </div>
+
+  <div class="check">
+    <input type="checkbox" id="acepta-musica">
+    <label for="acepta-musica" style="margin:0; font-weight:400">
+      Confirmo que este contenido cumple la
+      <a href="https://www.tiktok.com/legal/page/global/music-usage-confirmation/en"
+         target="_blank" rel="noopener">Confirmación de uso de música</a>
+      de TikTok y que La Fiore tiene los derechos de las imágenes y textos.
+    </label>
+  </div>
+
+  <div class="aviso">
+    La publicación aparecerá en la cuenta de TikTok autorizada. Puedes retirar el
+    acceso cuando quieras desde
+    <em>TikTok → Configuración → Seguridad y permisos → Aplicaciones autorizadas</em>.
+  </div>
+</section>
+
+<!-- 4 · publicar -->
+<section>
+  <h2>4 · Publicar</h2>
+  <div class="fila">
+    <button id="btn-borrador" type="button" class="secundario" disabled>
+      Enviar como borrador</button>
+    <button id="btn-directo" type="button" disabled>Publicar en TikTok</button>
+  </div>
+  <div class="estado" id="estado-envio">Conecta la cuenta para habilitar la publicación.</div>
+</section>
+
+<script>
+(function () {
+  "use strict";
+  // El conector local guarda las credenciales y habla con la API de TikTok.
+  // Esta pagina nunca ve tokens: solo datos de pantalla.
+  var CONECTOR = "http://localhost:8724";
+  var SITIO = "https://arielvm1-alt.github.io/lafiore-salon";
+
+  var $ = function (id) { return document.getElementById(id); };
+  var conectado = false;
+
+  function estadoConexion(t, clase) {
+    $("estado-conexion").innerHTML = clase ? '<span class="' + clase + '">' + t + "</span>" : t;
+  }
+  function estadoEnvio(t, clase) {
+    $("estado-envio").innerHTML = clase ? '<span class="' + clase + '">' + t + "</span>" : t;
+  }
+
+  function pedir(ruta, cuerpo) {
+    return fetch(CONECTOR + ruta, cuerpo ? {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(cuerpo)
+    } : {}).then(function (r) {
+      return r.json().then(function (j) {
+        if (!r.ok) { throw new Error(j.error || ("HTTP " + r.status)); }
+        return j;
+      });
+    });
+  }
+
+  function habilitar() {
+    var listo = conectado && $("privacidad").value && $("acepta-musica").checked;
+    $("btn-directo").disabled = !listo;
+    $("btn-borrador").disabled = !(conectado && $("acepta-musica").checked);
+  }
+
+  // ---------------------------------------------------------- conexion
+  $("btn-conectar").addEventListener("click", function () {
+    pedir("/auth-url").then(function (d) { window.open(d.url, "_blank"); })
+      .catch(function (e) { estadoConexion("No pude generar la URL: " + e.message, "mal"); });
+  });
+
+  $("btn-canjear").addEventListener("click", function () {
+    var codigo = $("codigo").value.trim();
+    if (!codigo) { estadoConexion("Pega primero el código.", "mal"); return; }
+    estadoConexion("Canjeando el código…");
+    pedir("/canjear", { code: codigo }).then(cargarPerfil)
+      .catch(function (e) { estadoConexion("Canje fallido: " + e.message, "mal"); });
+  });
+
+  function cargarPerfil() {
+    return pedir("/perfil").then(function (d) {
+      conectado = true;
+      $("sin-conexion").classList.add("oculto");
+      $("con-conexion").classList.remove("oculto");
+      $("perfil-nombre").textContent = d.display_name || "Cuenta de TikTok";
+      if (d.avatar_url) { $("perfil-foto").src = d.avatar_url; }
+      estadoConexion("Conectado como " + (d.display_name || "?") + ".", "ok");
+      return cargarPrivacidades();
+    });
+  }
+
+  function cargarPrivacidades() {
+    // Consulta obligatoria antes de publicar: opciones reales del creador.
+    return pedir("/creator-info").then(function (d) {
+      var nombres = {
+        "PUBLIC_TO_EVERYONE": "Público — cualquiera en TikTok",
+        "MUTUAL_FOLLOW_FRIENDS": "Amigos — seguidores que sigues de vuelta",
+        "FOLLOWER_OF_CREATOR": "Seguidores",
+        "SELF_ONLY": "Solo yo"
+      };
+      var sel = $("privacidad");
+      sel.length = 1;                                   // conserva el "Elige…"
+      (d.privacy_level_options || []).forEach(function (op) {
+        var o = document.createElement("option");
+        o.value = op; o.textContent = nombres[op] || op;
+        sel.appendChild(o);
+      });
+      if (d.comment_disabled) {
+        $("permitir-comentarios").checked = false;
+        $("permitir-comentarios").disabled = true;
+      }
+      estadoEnvio("Cuenta lista. Elige la visibilidad y confirma los derechos.");
+      habilitar();
+    });
+  }
+
+  // ---------------------------------------------------------- contenido
+  function cargarSets() {
+    pedir("/sets").then(function (d) {
+      var sel = $("set");
+      d.sets.forEach(function (s) {
+        var o = document.createElement("option");
+        o.value = s.numero; o.textContent = "Set " + s.numero + " · " + s.titulo;
+        sel.appendChild(o);
+      });
+      sel.addEventListener("change", cargarContenido);
+      cargarContenido();
+    }).catch(function (e) {
+      estadoEnvio("No encuentro el conector local (" + e.message + "). " +
+                  "Arranca: python conector_demo.py", "mal");
+    });
+  }
+
+  function cargarContenido() {
+    var n = $("set").value;
+    var cont = $("laminas");
+    cont.innerHTML = "";
+    for (var i = 1; i <= 6; i++) {
+      var img = document.createElement("img");
+      img.src = SITIO + "/salida/set_" + String(n).padStart(2, "0") +
+                "/tiktok/" + String(i).padStart(2, "0") + ".jpg";
+      img.alt = "Lámina " + i;
+      cont.appendChild(img);
+    }
+    pedir("/texto?set=" + n).then(function (d) { $("texto").value = d.texto; });
+  }
+
+  // ---------------------------------------------------------- publicar
+  ["privacidad", "acepta-musica"].forEach(function (id) {
+    $(id).addEventListener("change", habilitar);
+  });
+
+  function enviar(modo) {
+    estadoEnvio("Enviando a TikTok…");
+    $("btn-directo").disabled = true; $("btn-borrador").disabled = true;
+    pedir("/enviar", {
+      set: parseInt($("set").value, 10),
+      modo: modo,
+      privacidad: $("privacidad").value || null,
+      comentarios: $("permitir-comentarios").checked,
+      texto: $("texto").value
+    }).then(function (d) {
+      estadoEnvio((modo === "directo" ? "Publicado. " : "Enviado al buzón. ") +
+                  "publish_id: " + d.publish_id + "\nComprobando estado…", "ok");
+      return vigilar(d.publish_id);
+    }).catch(function (e) {
+      estadoEnvio("Error: " + e.message, "mal");
+    }).finally(habilitar);
+  }
+
+  function vigilar(id, intento) {
+    intento = intento || 0;
+    return pedir("/estado-envio?id=" + encodeURIComponent(id)).then(function (d) {
+      var linea = "publish_id: " + id + "\nEstado TikTok: " + d.status;
+      if (d.status === "PUBLISH_COMPLETE") {
+        estadoEnvio(linea + "\nListo: la publicación quedó en la cuenta.", "ok");
+      } else if (d.status === "FAILED") {
+        estadoEnvio(linea + "\nMotivo: " + (d.fail_reason || "?"), "mal");
+      } else if (intento < 15) {
+        estadoEnvio(linea + "…");
+        setTimeout(function () { vigilar(id, intento + 1); }, 4000);
+      }
+    });
+  }
+
+  $("btn-directo").addEventListener("click", function () { enviar("directo"); });
+  $("btn-borrador").addEventListener("click", function () { enviar("borrador"); });
+
+  // ---------------------------------------------------------- arranque
+  cargarSets();
+  pedir("/perfil").then(cargarPerfil).catch(function () { /* aun sin token */ });
+})();
+</script>
+</body>
+</html>
