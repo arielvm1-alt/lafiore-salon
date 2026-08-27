@@ -14,6 +14,7 @@ on:
     paths:
       - 'salida/**'
       - 'verificacion/**'
+      - 'web/**'
       - '.github/workflows/paginas.yml'
   workflow_dispatch:
 
@@ -46,6 +47,8 @@ jobs:
           cp -r salida sitio/salida
           # Los archivos de verificación de TikTok van en la raíz del sitio.
           if [ -d verificacion ]; then cp -r verificacion/. sitio/; fi
+          # Términos, privacidad e icono: los pide la revisión de TikTok.
+          if [ -d web ]; then cp -r web/. sitio/; fi
           # Sin esto, GitHub Pages ignora carpetas que empiezan con guion bajo.
           touch sitio/.nojekyll
           cat > sitio/index.html <<'FIN'
