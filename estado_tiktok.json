@@ -71,6 +71,13 @@
       "enviado_en": null,
       "publish_id": null,
       "intentos": 0
+    },
+    {
+      "set": "set_11",
+      "estado": "pendiente",
+      "enviado_en": null,
+      "publish_id": null,
+      "intentos": 0
     }
   ]
 }

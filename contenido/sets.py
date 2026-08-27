@@ -635,6 +635,67 @@ SETS = [
             "sub": "Cabina de masajes dentro del salón. Puedes juntarlo con tu pedicure.",
         },
     },
+    # ---------------------------------------------------------------- SET 11
+    {
+        "id": 11,
+        "num": "11",
+        "seccion": "Alisados",
+        "publico": "alisado",
+        "portada": {
+            "titulo": "Tu alisado *no se lava*. Se *cuida*.",
+            "sub": "Cuatro cuidados para que el liso te dure **meses, no semanas**.",
+        },
+        "paginas": [
+            {
+                "ante": "El lavado",
+                "titulo": "Sin *sulfatos*",
+                "casa": "Shampoo sin sulfatos, siempre. Revisa la etiqueta.",
+                "casa_icono": "shampoo_duda",
+                "salon": "Te decimos cuál sirve para tu alisado.",
+                "salon_icono": "shampoo_indicado",
+                "dato_a": "El shampoo con sulfato",
+                "dato_b": "se lleva el alisado.",
+            },
+            {
+                "ante": "La noche",
+                "titulo": "A la cama, *pelo seco*",
+                "casa": "Seca el pelo por completo antes de acostarte.",
+                "casa_icono": "secador_tibio",
+                "salon": "Te enseñamos el secado que no ondula.",
+                "salon_icono": "toalla_presiona",
+                "dato_a": "Dormir con pelo húmedo",
+                "dato_b": "marca ondas.",
+            },
+            {
+                "ante": "El calor",
+                "titulo": "La plancha, *casi nunca*",
+                "casa": "Si la usas, siempre con protector térmico.",
+                "casa_icono": "plancha_calor",
+                "salon": "Lo dejamos liso sin depender de la plancha.",
+                "salon_icono": "protector_termico",
+                "dato_a": "El liso ya está hecho.",
+                "dato_b": "No lo quemes.",
+            },
+            {
+                "ante": "El plazo",
+                "titulo": "Retoque *de raíz*",
+                "casa": "Agenda el retoque cuando asome la raíz.",
+                "casa_icono": "calendario_marca",
+                "salon": "Retocamos solo el crecimiento, no el largo.",
+                "salon_icono": "calendario_retoque",
+                "dato_a": "La raíz crece ondulada.",
+                "dato_b": "El largo ya está listo.",
+            },
+        ],
+        "cierre": {
+            "ante": "Tu próxima visita",
+            "plazo": "Cada 4 a 6 meses",
+            "detalle": "Alisado permanente, keratina Lisse Design y laminación biomimética. "
+                       "El retoque trabaja **solo el crecimiento**, no todo el pelo.",
+            "cta": "Agenda tu alisado",
+            "sub": "El shampoo sin sulfatos lo tienes acá: trabajamos Alfaparf y Marina Vital.",
+        },
+    },
 ]
 
 

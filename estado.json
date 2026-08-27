@@ -74,6 +74,13 @@
       "publicado_en": null,
       "media_id": null,
       "intentos": 0
+    },
+    {
+      "set": "set_11",
+      "estado": "pendiente",
+      "publicado_en": null,
+      "media_id": null,
+      "intentos": 0
     }
   ]
 }

@@ -22,6 +22,7 @@ HASHTAGS = {
     "piel": "#limpiezafacial #cuidadodelapiel #cosmetologia #pielsana #talagante #lafiore",
     "mirada": "#liftingdepestanas #extensionesdepestanas #cejasperfectas #depilacion #talagante #lafiore",
     "masaje": "#masajerelajante #descontracturante #reflexologia #bienestar #talagante #lafiore",
+    "alisado": "#alisadopermanente #keratinachile #cabelloliso #peluqueriachile #talagante #lafiore",
 }
 
 CUERPOS = {
@@ -108,6 +109,15 @@ CUERPOS = {
         "Guárdalo.",
         "masaje",
     ),
+    11: (
+        "El alisado no se destiñe ni se cae: se lava. Y casi siempre por el shampoo "
+        "equivocado.\n\n"
+        "Cuatro cuidados que le dan meses de vida a tu alisado o tu keratina: shampoo "
+        "sin sulfatos, dormir con el pelo seco, dejar la plancha descansar y retocar "
+        "solo la raíz cuando asome.\n\n"
+        "El retoque va cada 4 a 6 meses, y trabaja solo el crecimiento. Guárdalo.",
+        "alisado",
+    ),
 }
 
 
@@ -140,6 +150,7 @@ HASHTAGS_TIKTOK = {
     "piel": "#piel #limpiezafacial #skincare #cosmetologia #cuidadodelapiel #chile",
     "mirada": "#pestanas #cejas #liftingdepestanas #mirada #belleza #chile",
     "masaje": "#masaje #descontracturante #bienestar #relajacion #autocuidado #chile",
+    "alisado": "#alisado #keratina #alisadopermanente #cabelloliso #tipsdecabello #chile",
 }
 
 
