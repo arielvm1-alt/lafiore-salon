@@ -372,3 +372,66 @@ python plantilla/render.py
   sobra de lejos; el script igual consulta la cuota antes de subir.
 - Un contenedor de carrusel caduca a las 24 horas si no se publica.
 - Máximo 10 imágenes por carrusel (aquí van 6).
+
+---
+
+## 8. TikTok
+
+El mismo contenido, en vertical, va también al TikTok del salón. No se publica
+solo del todo: llega **armado al buzón** de la cuenta y alguien lo publica desde
+el teléfono con un toque, eligiendo la música.
+
+### Por qué no publica directo
+
+La API de TikTok tiene dos modos. `DIRECT_POST` publica solo, pero exige que
+TikTok **audite la app**, y esa auditoría evalúa la interfaz de la aplicación:
+un publicador automático sin pantallas no la pasa. `MEDIA_UPLOAD` no necesita
+auditoría y deja el borrador listo. Es la diferencia entre cero intervención y
+un toque en el teléfono, a cambio de que funcione hoy.
+
+### Cómo está montado
+
+| Pieza | Dónde |
+|---|---|
+| App | «La Fiore Salon Carrusel» en developers.tiktok.com |
+| Entorno | **Sandbox** («Salon carrusel»), con `la_fiore.cl` en *Target Users* |
+| Permisos | `user.info.basic` y `video.upload` |
+| Imágenes | `salida/set_NN/tiktok/01..06.jpg`, 1080×1920 |
+| Hosting | GitHub Pages, verificado por prefijo de URL |
+
+**Por qué el Sandbox y no Producción:** una app en Draft no tiene credenciales
+vivas, y el OAuth falla con un error de `client_key`. El Sandbox funciona sin
+revisión y entrega el borrador a la cuenta real. Está comprobado.
+
+### Los cuatro secretos
+
+```
+TIKTOK_CLIENT_KEY       del Sandbox, no de Producción
+TIKTOK_CLIENT_SECRET    del Sandbox
+TIKTOK_REFRESH_TOKEN    lo entrega obtener_credenciales_tiktok.py, dura un año
+TIKTOK_BASE_URL         https://arielvm1-alt.github.io/lafiore-salon/salida
+```
+
+Para conseguir los dos últimos:
+
+```bash
+python obtener_credenciales_tiktok.py
+```
+
+### Trampas que ya pisamos
+
+1. **TikTok solo descarga desde una URL verificada.** `raw.githubusercontent.com`
+   no sirve: no es nuestro. Por eso existe el workflow de GitHub Pages.
+2. **Producción y Sandbox se verifican por separado**, cada uno con su propio
+   archivo de firma. Verificar solo uno da `url_ownership_unverified` al enviar.
+   Los dos archivos están en `verificacion/`.
+3. **El Redirect URI tiene que ser https.** Localhost no se acepta; se usa
+   `/autorizado.html` del propio sitio.
+
+### Comprobar que sigue vivo
+
+```bash
+python publicar_tiktok.py --verificar   # cuenta, URLs e imágenes
+python publicar_tiktok.py --estado      # qué se envió y qué falta
+python publicar_tiktok.py --dry-run     # qué enviaría, sin llamar a la API
+```

@@ -4,9 +4,9 @@
   "sets": [
     {
       "set": "set_01",
-      "estado": "error",
-      "enviado_en": null,
-      "publish_id": null,
+      "estado": "enviado",
+      "enviado_en": "2026-08-26T23:12:48-0400",
+      "publish_id": "p_inbox_url~v2.7678543425007896584",
       "intentos": 1
     },
     {
