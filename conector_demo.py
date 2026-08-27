@@ -41,7 +41,10 @@ BASE_IMAGENES = "https://arielvm1-alt.github.io/lafiore-salon/salida"
 # La pagina puede servirse desde el propio conector o desde GitHub Pages.
 ORIGENES = ("https://arielvm1-alt.github.io", "http://localhost:%d" % PUERTO)
 
-CREDENCIALES = os.path.join(RAIZ, "credenciales_tiktok.txt")
+# La grabacion de la demo apunta a una copia SIN token de refresco, para
+# que el flujo de autorizacion completo salga en camara.
+CREDENCIALES = os.environ.get("CONECTOR_CREDENCIALES",
+                              os.path.join(RAIZ, "credenciales_tiktok.txt"))
 
 try:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")

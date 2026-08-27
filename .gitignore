@@ -8,3 +8,6 @@ credenciales_tiktok.txt
 # Vive solo en tu computador. Lo que el proyecto necesita ya esta
 # derivado en assets/ (el sello en PNG y las dos fuentes corporativas).
 insumos/
+
+# perfil del navegador de la grabacion demo (contiene sesiones)
+.perfil_demo/
