@@ -84,6 +84,13 @@ jobs:
             echo "TikTok sin configurar todavia: me lo salto."
             exit 0
           fi
+          # Si la ejecucion era solo para comprobar accesos, aqui tambien se
+          # comprueba y no se envia nada. Sin esto, un 'verificar' terminaba
+          # mandando un carrusel de verdad al buzon.
+          if [ "${{ github.event.inputs.verificar }}" = "true" ]; then
+            python publicar_tiktok.py --verificar
+            exit 0
+          fi
           ARGS=""
           if [ -n "${{ github.event.inputs.set }}" ]; then
             ARGS="--set ${{ github.event.inputs.set }}"
