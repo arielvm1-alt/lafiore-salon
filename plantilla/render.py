@@ -7,8 +7,9 @@ Uso:
     python plantilla/render.py 1          # solo el set 01
     python plantilla/render.py 1 3 7      # sets sueltos
 
-Salida: salida/set_NN/01_portada.jpg ... 06_cierre.jpg  (1080x1350, JPG q95)
-        salida/set_NN/historia.jpg                      (1080x1920)
+Salida: salida/set_NN/01_portada.jpg ... 06_cierre.jpg  (1080x1350, feed)
+        salida/set_NN/historia.jpg                      (1080x1920, historia)
+        salida/set_NN/tiktok/01.jpg ... 06.jpg          (1080x1920, TikTok)
         salida/captions.json
 
 La regla al corregir un desborde es acortar el texto, nunca achicar la
@@ -159,6 +160,10 @@ def render_sets(ids=None):
             viewport={"width": plantilla.ANCHO, "height": plantilla.ALTO_HISTORIA},
             device_scale_factor=ESCALA,
         )
+        pagina_tiktok = navegador.new_page(
+            viewport={"width": plantilla.ANCHO, "height": plantilla.ALTO_TIKTOK},
+            device_scale_factor=ESCALA,
+        )
         for s in objetivo:
             carpeta = os.path.join(SALIDA, "set_%02d" % s["id"])
             os.makedirs(carpeta, exist_ok=True)
@@ -198,6 +203,24 @@ def render_sets(ids=None):
             generados += 1
             print("   OK  historia    %dx%d  %d KB" % (
                 tam[0], tam[1], os.path.getsize(destino) // 1024))
+
+            # carrusel vertical para TikTok, en su propia subcarpeta
+            carpeta_tt = os.path.join(carpeta, "tiktok")
+            os.makedirs(carpeta_tt, exist_ok=True)
+            for nombre, html in plantilla.laminas_tiktok(s):
+                ruta_html = os.path.join(tmp, "set%02d_tt_%s.html" % (s["id"], nombre))
+                with open(ruta_html, "w", encoding="utf-8") as f:
+                    f.write(html)
+                pagina_tiktok.goto("file:///" + ruta_html.replace("\\", "/"))
+                pagina_tiktok.wait_for_timeout(150)
+                for pr in pagina_tiktok.evaluate(QC_JS):
+                    fallos.append("set_%02d/tiktok/%s -> %s" % (s["id"], nombre, pr))
+                destino = os.path.join(carpeta_tt, nombre + ".jpg")
+                png = pagina_tiktok.locator(".lamina").screenshot(type="png")
+                tam = _guardar_jpg(png, destino, (plantilla.ANCHO, plantilla.ALTO_TIKTOK))
+                generados += 1
+            print("   OK  tiktok      6 laminas de %dx%d" % (
+                plantilla.ANCHO, plantilla.ALTO_TIKTOK))
 
         navegador.close()
 

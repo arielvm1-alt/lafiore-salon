@@ -33,6 +33,13 @@ FUENTES = os.path.join(ASSETS, "fonts")
 
 ANCHO, ALTO = 1080, 1350
 ALTO_HISTORIA = 1920          # las historias son 9:16
+ALTO_TIKTOK = 1920            # el carrusel de TikTok tambien
+
+# TikTok dibuja su interfaz sobre la foto: abajo el nombre de la cuenta y el
+# texto, a la derecha la columna de botones. Estas son las franjas que hay
+# que dejar libres para que no tape nada.
+SEGURO_ABAJO = 300
+SEGURO_DERECHA = 150
 
 # ---- identidad -----------------------------------------------------------
 NEGRO = "#15181A"             # negro corporativo
@@ -321,6 +328,48 @@ body { -webkit-font-smoothing:antialiased; text-rendering:geometricPrecision;
 }
 .banda-cta .logo-cierre { height:150px; width:auto; display:block; flex:0 0 auto; }
 
+/* ------------------------------------------------------- TIKTOK 9:16 */
+/* Misma retorica, otro lienzo. Lo que cambia es el aire: hay 570 px mas de
+   alto, y hay que respetar las franjas donde TikTok pone su interfaz. */
+.lamina.tiktok.interior { padding:84px %(seg_der)dpx %(seg_abajo)dpx 54px; }
+.lamina.tiktok.portada,
+.lamina.tiktok.cierre { padding:110px %(seg_der)dpx %(seg_abajo)dpx 66px; }
+
+.lamina.tiktok .barra-sup { font-size:26px; }
+.lamina.tiktok .masthead { margin-top:26px; }
+.lamina.tiktok .masthead .marca { font-size:70px; }
+.lamina.tiktok .masthead .bajada { font-size:24px; }
+.lamina.tiktok .folio { width:64px; height:64px; font-size:36px; }
+.lamina.tiktok .antetitulo { font-size:40px; margin-top:38px; }
+.lamina.tiktok .titulo { font-size:84px; margin-top:16px; }
+
+.lamina.tiktok .filas { margin-top:40px; }
+.lamina.tiktok .fila { padding:38px 0; gap:20px; }
+.lamina.tiktok .disco { flex:0 0 62px; width:62px; height:62px; }
+.lamina.tiktok .disco-marca { width:34px; height:34px; }
+.lamina.tiktok .etiqueta { font-size:30px; }
+.lamina.tiktok .cuerpo { font-size:50px; margin-top:14px; }
+.lamina.tiktok .dato-lineas { font-size:58px; }
+.lamina.tiktok .ilu-col { flex:0 0 150px; height:132px; }
+
+.lamina.tiktok .kicker { font-size:32px; }
+.lamina.tiktok .portada-titulo { font-size:102px; }
+.lamina.tiktok .portada-sub { font-size:44px; max-width:100%%; }
+.lamina.tiktok .portada-centro { padding-bottom:70px; }
+.lamina.tiktok .logo-portada { height:170px; }
+.lamina.tiktok .desliza .txt { font-size:32px; }
+
+.lamina.tiktok .cierre-plazo { font-size:118px; }
+.lamina.tiktok .cierre-detalle { font-size:44px; max-width:100%%; }
+.lamina.tiktok .cierre-centro { padding-bottom:40px; }
+.lamina.tiktok .banda-cta .txt { font-size:54px; }
+.lamina.tiktok .banda-cta .sub { font-size:34px; }
+.lamina.tiktok .banda-cta .logo-cierre { height:140px; }
+
+.lamina.tiktok .pie { margin-top:30px; padding-top:24px; }
+.lamina.tiktok .logo-pie { height:112px; }
+.lamina.tiktok .pie-txt, .lamina.tiktok .pie-der { font-size:28px; }
+
 /* ---------------------------------------------------------------- PIE */
 .pie { margin-top:24px; border-top:3px solid %(tinta)s; padding-top:20px;
        display:flex; align-items:center; justify-content:space-between; }
@@ -336,6 +385,7 @@ body { -webkit-font-smoothing:antialiased; text-rendering:geometricPrecision;
         "caja": p["caja"], "t_portada": round(96 * e), "t_titulo": round(88 * e),
         "t_dato": round(58 * e), "t_plazo": round(124 * e), "t_cta": round(50 * e),
         "grano": GRANO, "ancho": ANCHO, "alto": ALTO,
+        "seg_abajo": SEGURO_ABAJO, "seg_der": SEGURO_DERECHA,
         "negro": NEGRO, "dorado": DORADO, "dorado_luz": DORADO_LUZ,
         "cuero": CUERO, "hueso": HUESO, "tinta": TINTA, "gris": GRIS, "humo": HUMO,
     }
@@ -476,4 +526,41 @@ def laminas(s):
     for i in range(4):
         out.append(("%02d_pagina" % (i + 2), interior(s, i)))
     out.append(("06_cierre", cierre(s)))
+    return out
+
+
+# --------------------------------------------------------------------------
+# variante vertical para el carrusel de fotos de TikTok
+# --------------------------------------------------------------------------
+
+def _vertical(html):
+    """Pasa una lamina al lienzo 9:16 anadiendole la clase 'tiktok'."""
+    return html.replace("<div class='lamina ", "<div class='lamina tiktok ", 1)
+
+
+def portada_tiktok(s):
+    return _documento("portada tiktok", _cuerpo_portada(s, "Desliza"), ALTO_TIKTOK)
+
+
+def interior_tiktok(s, indice):
+    return _vertical(_documento_alto(interior(s, indice), ALTO_TIKTOK))
+
+
+def cierre_tiktok(s):
+    return _vertical(_documento_alto(cierre(s), ALTO_TIKTOK))
+
+
+def _documento_alto(html, alto):
+    """Cambia el alto del lienzo de un documento ya generado."""
+    return html.replace(
+        "</head>",
+        "<style>html,body,.lamina{height:%dpx;}</style></head>" % alto, 1)
+
+
+def laminas_tiktok(s):
+    """Las mismas 6 laminas en 1080x1920, para el carrusel de TikTok."""
+    out = [("01", portada_tiktok(s))]
+    for i in range(4):
+        out.append(("%02d" % (i + 2), interior_tiktok(s, i)))
+    out.append(("06", cierre_tiktok(s)))
     return out
