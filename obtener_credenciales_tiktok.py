@@ -22,7 +22,6 @@ OJO: hay que autorizar con la cuenta de TikTok del SALON
 Sin dependencias externas: solo biblioteca estandar.
 """
 
-import getpass
 import json
 import os
 import secrets
@@ -88,12 +87,81 @@ def al_portapapeles(texto):
         return False
 
 
+def pedir_oculto(etiqueta):
+    """Lee una clave mostrando un asterisco por caracter.
+
+    getpass no dibuja nada. Es lo mas discreto, pero pegar a ciegas hace
+    imposible notar que la pega se corto o que no entro nada. Aqui se ve un
+    asterisco por letra y el total al final, sin revelar el valor.
+    """
+    sys.stdout.write(etiqueta)
+    sys.stdout.flush()
+
+    try:
+        import msvcrt
+    except ImportError:
+        texto = _oculto_posix()
+    else:
+        letras = []
+        while True:
+            ch = msvcrt.getwch()
+            if ch in ("\r", "\n"):
+                break
+            if ch == "\x03":                     # Ctrl+C
+                raise KeyboardInterrupt
+            if ch in ("\x00", "\xe0"):           # flechas y teclas especiales
+                msvcrt.getwch()
+                continue
+            if ch == "\b":                       # borrar
+                if letras:
+                    letras.pop()
+                    sys.stdout.write("\b \b")
+                    sys.stdout.flush()
+                continue
+            letras.append(ch)
+            sys.stdout.write("*")
+            sys.stdout.flush()
+        texto = "".join(letras)
+
+    print("   (%d caracteres)" % len(texto))
+    return texto.strip()
+
+
+def _oculto_posix():
+    """Lo mismo, en macOS y Linux."""
+    import termios
+    import tty
+    fd = sys.stdin.fileno()
+    previo = termios.tcgetattr(fd)
+    letras = []
+    try:
+        tty.setraw(fd)
+        while True:
+            ch = sys.stdin.read(1)
+            if ch in ("\r", "\n"):
+                break
+            if ch == "\x03":
+                raise KeyboardInterrupt
+            if ch in ("\x7f", "\b"):
+                if letras:
+                    letras.pop()
+                    sys.stdout.write("\b \b")
+                    sys.stdout.flush()
+                continue
+            letras.append(ch)
+            sys.stdout.write("*")
+            sys.stdout.flush()
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, previo)
+    return "".join(letras)
+
+
 def main():
     print("Autorizacion de TikTok  ·  La Fiore SALON")
-    print("Los dos valores se escriben ocultos. Pegalos y pulsa Enter.\n")
+    print("Veras un asterisco por caracter y el total al pulsar Enter.\n")
 
-    client_key = getpass.getpass("1. Client key de la app:    ").strip()
-    client_secret = getpass.getpass("2. Client secret de la app: ").strip()
+    client_key = pedir_oculto("1. Client key de la app:    ")
+    client_secret = pedir_oculto("2. Client secret de la app: ")
     if not client_key or not client_secret:
         raise SystemExit("Faltan datos. No se hizo nada.")
 
