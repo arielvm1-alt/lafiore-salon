@@ -18,9 +18,9 @@
     },
     {
       "set": "set_03",
-      "estado": "pendiente",
-      "enviado_en": null,
-      "publish_id": null,
+      "estado": "enviado",
+      "enviado_en": "2026-09-02T18:19:32+0000",
+      "publish_id": "p_inbox_url~v2.7681003967333058581",
       "intentos": 0
     },
     {
