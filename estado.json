@@ -28,10 +28,11 @@
     },
     {
       "set": "set_04",
-      "estado": "pendiente",
-      "publicado_en": null,
-      "media_id": null,
-      "intentos": 0
+      "estado": "publicado",
+      "publicado_en": "2026-09-05T01:26:20+0000",
+      "media_id": "17950961895036683",
+      "intentos": 0,
+      "historia_media_id": "18113116375957550"
     },
     {
       "set": "set_05",
