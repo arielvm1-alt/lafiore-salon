@@ -69,7 +69,11 @@ jobs:
         run: |
           git config user.name  "buzon-tiktok"
           git config user.email "actions@github.com"
-          git add buzon/entrada buzon/estado_buzon.json
+          # buzon/entrada/ no existe hasta que llega el primer material, y
+          # git add falla si le nombras una ruta que no esta. Eso reventaba
+          # cada 20 minutos desde el 27 de agosto y llenaba el correo.
+          mkdir -p buzon/entrada
+          git add -A buzon
           if git diff --cached --quiet; then
             echo "cambios=no" >> "$GITHUB_OUTPUT"
           else

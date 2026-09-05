@@ -424,16 +424,36 @@ def cmd_estado():
     return 0
 
 
-def hora_chilena_correcta(objetivo=12):
-    """True si en Santiago son las <objetivo> h. Evita depender del horario de verano.
+DIAS_DE_PUBLICACION = (0, 2)       # lunes y miercoles, en dias de Chile
+HORA_DESDE, HORA_HASTA = 12, 20    # ventana local en la que se acepta publicar
 
-    El cron lanza dos ejecuciones el mismo dia (15:00 y 16:00 UTC) porque Chile
-    cambia de hora dos veces al ano; solo una de las dos cae a las 12:00 locales
-    y es la que debe publicar.
 
-    Si no se puede leer la zona horaria, NO se publica. Ante la duda es mejor
-    saltarse una publicacion -que se recupera con un 'Run workflow' a mano- que
-    publicar en las dos ejecuciones y gastar dos sets el mismo dia.
+def avisar_a_actions(clave, valor):
+    """Deja un dato para los pasos siguientes del workflow. Fuera de GitHub, nada."""
+    destino = os.environ.get("GITHUB_OUTPUT")
+    if not destino:
+        return
+    try:
+        with open(destino, "a", encoding="utf-8") as f:
+            f.write("%s=%s\n" % (clave, valor))
+    except OSError:
+        pass
+
+
+def dentro_de_la_ventana(desde=HORA_DESDE, hasta=HORA_HASTA):
+    """True si en Santiago es dia de publicacion y la hora cae en la ventana.
+
+    Esto antes exigia la hora exacta (ahora.hour == 12) y ahi se rompio la
+    automatizacion. GitHub Actions no lanza el cron cuando se le pide: lo
+    atrasa segun su carga, y se atrasa mucho. El lunes 31 de agosto la
+    ejecucion llego a las 16:34 de Chile y el miercoles 2 de septiembre a
+    las 14:19. Ninguna caia en la hora exacta, asi que ninguna publico, y
+    nadie se entero: saltarse la publicacion no es un error y no abre
+    incidencia. Instagram quedo detenido dos semanas.
+
+    El candado contra publicar dos veces el mismo dia es la fecha
+    -ya_se_publico_hoy-, no la hora. Con ese candado puesto la ventana puede
+    ser ancha sin riesgo: vale mas salir a las tres de la tarde que no salir.
     """
     try:
         from zoneinfo import ZoneInfo
@@ -441,12 +461,18 @@ def hora_chilena_correcta(objetivo=12):
         ahora = datetime.now(ZoneInfo("America/Santiago"))
     except Exception as e:                                   # sin tzdata
         print("No se pudo leer la hora de Chile (%s)." % e)
-        print("Esta ejecucion no publica: el cron corre dos veces al dia y sin")
-        print("la zona horaria no se puede saber cual de las dos corresponde.")
+        print("Esta ejecucion no publica: sin zona horaria no se sabe si toca.")
         print("Instala tzdata, o publica a mano con: python publicar.py")
         return False
-    print("Hora en Santiago: %s" % ahora.strftime("%Y-%m-%d %H:%M %Z"))
-    return ahora.hour == objetivo
+    print("Hora en Santiago: %s" % ahora.strftime("%Y-%m-%d %H:%M %Z (%a)"))
+    if ahora.weekday() not in DIAS_DE_PUBLICACION:
+        print("Hoy no es lunes ni miercoles en Chile. Esta ejecucion no publica.")
+        return False
+    if not desde <= ahora.hour <= hasta:
+        print("Son las %d h en Chile, fuera de la ventana de %d a %d h. No publica."
+              % (ahora.hour, desde, hasta))
+        return False
+    return True
 
 
 def fecha_chilena():
@@ -499,9 +525,10 @@ def cmd_publicar(args):
     # que para eso se lanza a mano.
     if args.respetar_hora:
         if ya_se_publico_hoy(estado):
+            avisar_a_actions("publico", "false")
             return 0
-        if not hora_chilena_correcta(args.hora):
-            print("No son las %d:00 en Chile. Esta ejecucion no publica." % args.hora)
+        if not dentro_de_la_ventana(args.desde, args.hasta):
+            avisar_a_actions("publico", "false")
             return 0
 
     if args.set:
@@ -513,6 +540,7 @@ def cmd_publicar(args):
         entrada = siguiente_pendiente(estado)
         if entrada is None:
             print("No queda ningun set pendiente. Nada que hacer.")
+            avisar_a_actions("publico", "false")
             return 0
 
     cfg = config()
@@ -549,6 +577,8 @@ def cmd_publicar(args):
         entrada["historia_media_id"] = historia_id
         entrada["publicado_en"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
         guardar_estado(estado)
+    # TikTok solo sale detras de Instagram: si aqui no se publico, alla tampoco.
+    avisar_a_actions("publico", "false" if args.dry_run else "true")
     return 0
 
 
@@ -564,8 +594,11 @@ def main():
                    help="que clase de token hay y cuando caduca (nunca lo imprime)")
     p.add_argument("--iniciar", action="store_true", help="crea estado.json desde cero")
     p.add_argument("--respetar-hora", action="store_true",
-                   help="solo publica si en Chile es la hora indicada (para el cron con horario de verano)")
-    p.add_argument("--hora", type=int, default=12, help="hora local de Chile en la que publicar (defecto 12)")
+                   help="solo publica si en Chile es lunes o miercoles dentro de la ventana (para el cron)")
+    p.add_argument("--desde", type=int, default=HORA_DESDE,
+                   help="hora de Chile desde la que se acepta publicar (defecto %d)" % HORA_DESDE)
+    p.add_argument("--hasta", type=int, default=HORA_HASTA,
+                   help="hora de Chile hasta la que se acepta publicar (defecto %d)" % HORA_HASTA)
     args = p.parse_args()
 
     try:
