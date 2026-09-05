@@ -68,7 +68,7 @@ QC_JS = r"""
   const pie = document.querySelector('.pie');
   if (pie) {
     const topePie = pie.getBoundingClientRect().top;
-    for (const sel of ['.filas', '.titulo', '.antetitulo']) {
+    for (const sel of ['.filas', '.titulo', '.antetitulo', '.dato-bloque']) {
       const el = document.querySelector(sel);
       if (!el) continue;
       const b = el.getBoundingClientRect().bottom;
@@ -81,7 +81,8 @@ QC_JS = r"""
   const textos = document.querySelectorAll(
     '.cuerpo, .dato-lineas > div, .titulo, .antetitulo, .portada-titulo, .portada-sub, ' +
     '.cierre-plazo, .cierre-detalle, .banda-cta .txt, .banda-cta .sub, ' +
-    '.masthead .marca, .masthead .bajada, .etiqueta, .kicker, .pie-txt, .pie-der');
+    '.masthead .marca, .masthead .bajada, .etiqueta, .kicker, .pie-txt, .pie-der, ' +
+    '.riel span, .cifra');
   for (const el of textos) {
     if (el.scrollWidth > el.clientWidth + 1)
       problemas.push(`texto desbordado (${el.className || el.tagName}): "${el.textContent.trim().slice(0, 40)}"`);

@@ -25,7 +25,6 @@ import base64
 import os
 import re
 
-import iconos
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ASSETS = os.path.join(RAIZ, "assets")
@@ -231,75 +230,84 @@ body { -webkit-font-smoothing:antialiased; text-rendering:geometricPrecision;
 .lamina.historia .portada-centro { justify-content:center; padding-bottom:0; }
 
 /* ----------------------------------------------------------- INTERIOR */
-.interior { background:%(hueso)s; padding:50px 54px; color:%(tinta)s; }
+/* Dos vestidos para la misma lamina, clara y oscura, que se alternan al
+   deslizar. Antes las cuatro interiores eran identicas y el carrusel se
+   leia como un formulario: mismo encabezado, misma grilla, mismo beige.
+   Lo que cambia es el fondo y los colores del texto; la estructura es una
+   sola, asi que el copy no se toca. */
+.interior { padding:64px 70px 54px; }
+.interior.clara {
+  background:radial-gradient(120%% 80%% at 12%% 0%%, #F6F2DC 0%%, %(hueso)s 55%%, #E2DCC0 100%%);
+  color:%(tinta)s;
+}
+.interior.oscura {
+  background:radial-gradient(130%% 90%% at 82%% 6%%, #23282B 0%%, %(negro)s 62%%);
+  color:#FFFFFF;
+}
 
-.barra-sup {
-  display:flex; justify-content:space-between; align-items:baseline;
-  font-family:Texto; font-size:24px; letter-spacing:.20em;
-  color:%(gris)s; text-transform:uppercase;
-}
-.masthead { position:relative; margin-top:18px; text-align:center; }
-.masthead .marca {
-  font-family:'Marca'; font-weight:700; font-size:62px; letter-spacing:.14em;
-  line-height:1.06; color:%(tinta)s;
-}
-.masthead .bajada {
-  font-family:Texto; font-size:23px; letter-spacing:.32em;
-  color:%(cuero)s; margin-top:10px; text-transform:uppercase;
-}
-.folio {
-  position:absolute; left:0; top:50%%; transform:translateY(-50%%);
-  width:58px; height:58px; background:%(dorado)s; color:#FFFFFF;
-  display:flex; align-items:center; justify-content:center;
-  font-family:'Marca'; font-weight:700; font-size:32px; line-height:1;
-}
-.doble-regla { margin-top:18px; }
-.doble-regla i { display:block; background:%(tinta)s; }
-.doble-regla i:first-child { height:3px; }
-.doble-regla i:last-child { height:2px; margin-top:6px; }
+/* El sello ya se vio en la portada: aqui basta un riel fino. Antes ocupaba
+   la quinta parte de cada lamina, repetido cinco veces. */
+.riel { display:flex; align-items:baseline; gap:20px;
+        font-family:Texto; font-size:25px; letter-spacing:.24em; text-transform:uppercase; }
+.riel i { flex:1; height:1px; display:block; transform:translateY(-8px); }
+.clara .riel { color:%(gris)s; }
+.clara .riel .sec { color:%(cuero)s; }
+.clara .riel i { background:rgba(21,24,26,.22); }
+.oscura .riel { color:%(humo)s; }
+.oscura .riel .sec { color:%(dorado_luz)s; }
+.oscura .riel i { background:rgba(225,197,143,.30); }
 
-.antetitulo {
-  font-family:Texto; font-size:36px; letter-spacing:.20em;
-  color:%(cuero)s; margin-top:24px; line-height:1; text-transform:uppercase;
-}
-.titulo {
-  font-family:Display; font-weight:700; font-size:%(t_titulo)dpx; line-height:1.02;
-  letter-spacing:.01em; color:%(tinta)s; margin-top:12px; text-transform:%(caja)s;
-}
-.titulo em { font-style:normal; color:%(dorado)s; }
+.cab { display:flex; align-items:flex-start; gap:34px; margin-top:52px; }
+.cifra { font-family:Display; font-weight:700; font-size:176px; line-height:.78;
+         color:transparent; flex:0 0 auto;
+         font-variant-numeric:lining-nums; font-feature-settings:'lnum' 1, 'onum' 0; }
+.clara .cifra { -webkit-text-stroke:3px rgba(144,101,31,.55); }
+.oscura .cifra { -webkit-text-stroke:3px rgba(225,197,143,.45); }
+.tit-col { flex:1; min-width:0; padding-top:10px; }
 
-.filas { flex:1; display:flex; flex-direction:column; justify-content:space-between; margin-top:26px; }
-.fila { display:flex; align-items:center; gap:22px; padding:26px 0; }
-.fila + .fila { border-top:2px solid rgba(21,24,26,.18); }
-.disco {
-  flex:0 0 58px; width:58px; height:58px; border-radius:50%%; align-self:flex-start;
-  margin-top:2px; display:flex; align-items:center; justify-content:center;
-}
-.disco-marca { width:32px; height:32px; display:block; }
-.disco.casa { background:%(tinta)s; }
-.disco.salon { background:%(dorado)s; }
-.disco.dato { border:5px solid %(dorado)s; }
-/* la etiqueta va encima del texto: asi el texto se lleva todo el ancho */
-.bloque { flex:1 1 auto; min-width:0; }
-.etiqueta {
-  font-family:Texto; font-size:28px; line-height:1;
-  letter-spacing:.22em; text-transform:uppercase;
-}
-.etiqueta.casa { color:%(gris)s; }
-.etiqueta.salon { color:%(dorado)s; }
-.etiqueta.dato { font-size:28px; color:%(dorado)s; letter-spacing:.22em; }
-.fila.dato-fila { display:flex; }
-.cuerpo {
-  font-family:Texto; font-size:51px; line-height:1.18; color:#2B2E30; margin-top:12px;
-}
-.dato-lineas {
-  margin-top:14px; font-family:Display; font-weight:700; font-size:%(t_dato)dpx;
-  line-height:1.16; text-transform:%(caja)s; letter-spacing:.01em;
-}
-.dato-lineas .a { color:%(tinta)s; }
-.dato-lineas .b { color:%(dorado)s; }
-.ilu-col { flex:0 0 178px; height:150px; display:flex; align-items:center; justify-content:center; }
-.ilu { width:100%%; height:100%%; display:block; }
+.antetitulo { font-family:Texto; font-size:32px; letter-spacing:.22em;
+              line-height:1; text-transform:uppercase; }
+.clara .antetitulo { color:%(cuero)s; }
+.oscura .antetitulo { color:%(dorado_luz)s; }
+.titulo { font-family:Display; font-weight:700; font-size:%(t_titulo)dpx; line-height:1.02;
+          letter-spacing:.01em; margin-top:14px; text-transform:%(caja)s; }
+.clara .titulo { color:%(tinta)s; }
+.clara .titulo em { font-style:normal; color:%(dorado)s; }
+.oscura .titulo { color:#FFFFFF; }
+.oscura .titulo em { font-style:normal; color:%(dorado_luz)s; }
+
+/* Sin columna de ilustracion: el texto se lleva el ancho completo y sube de
+   51 a 54 px. Los dibujos genericos restaban mas de lo que sumaban. */
+/* space-evenly y no center: con center todo el aire sobrante se iba a los
+   extremos y en la version oscura quedaba un hueco evidente sobre el dato. */
+.filas { flex:1; display:flex; flex-direction:column; justify-content:space-evenly; }
+.fila { padding:32px 0; }
+.clara .fila + .fila { border-top:1px solid rgba(21,24,26,.20); }
+.oscura .fila + .fila { border-top:1px solid rgba(225,197,143,.24); }
+.etiqueta { font-family:Texto; font-size:26px; letter-spacing:.26em; line-height:1;
+            text-transform:uppercase; display:flex; align-items:center; gap:16px; }
+.etiqueta i { flex:0 0 auto; width:26px; height:3px; background:currentColor; display:block; }
+.clara .etiqueta.casa { color:%(gris)s; }
+.clara .etiqueta.salon { color:%(dorado)s; }
+.oscura .etiqueta.casa { color:%(humo)s; }
+.oscura .etiqueta.salon { color:%(dorado_luz)s; }
+.cuerpo { font-family:Texto; font-size:54px; line-height:1.16; margin-top:16px; }
+.clara .cuerpo { color:#24272A; }
+.oscura .cuerpo { color:#F2EFE6; }
+
+/* El dato en cuero cafe: el tercer color de la identidad no aparecia nunca. */
+.dato-bloque { margin-top:4px; }
+.clara .dato-bloque { background:%(cuero)s; padding:34px 36px; }
+.oscura .dato-bloque { border-left:5px solid %(dorado_luz)s; padding:6px 0 6px 34px; }
+.dato-bloque .etiqueta { font-size:24px; letter-spacing:.28em; }
+.clara .dato-bloque .etiqueta { color:rgba(246,242,220,.75); }
+.oscura .dato-bloque .etiqueta { color:%(humo)s; }
+.dato-lineas { margin-top:14px; font-family:Display; font-weight:700; font-size:%(t_dato)dpx;
+               line-height:1.14; text-transform:%(caja)s; letter-spacing:.01em; }
+.clara .dato-lineas .a { color:#F6F2DC; }
+.clara .dato-lineas .b { color:%(dorado_luz)s; }
+.oscura .dato-lineas .a { color:#FFFFFF; }
+.oscura .dato-lineas .b { color:%(dorado_luz)s; }
 
 /* ------------------------------------------------------------- CIERRE */
 .cierre { background:%(negro)s; padding:72px 66px; color:#FFFFFF; }
@@ -335,22 +343,20 @@ body { -webkit-font-smoothing:antialiased; text-rendering:geometricPrecision;
 .lamina.tiktok.portada,
 .lamina.tiktok.cierre { padding:110px %(seg_der)dpx %(seg_abajo)dpx 66px; }
 
-.lamina.tiktok .barra-sup { font-size:26px; }
-.lamina.tiktok .masthead { margin-top:26px; }
-.lamina.tiktok .masthead .marca { font-size:70px; }
-.lamina.tiktok .masthead .bajada { font-size:24px; }
-.lamina.tiktok .folio { width:64px; height:64px; font-size:36px; }
-.lamina.tiktok .antetitulo { font-size:40px; margin-top:38px; }
-.lamina.tiktok .titulo { font-size:84px; margin-top:16px; }
-
-.lamina.tiktok .filas { margin-top:40px; }
-.lamina.tiktok .fila { padding:38px 0; gap:20px; }
-.lamina.tiktok .disco { flex:0 0 62px; width:62px; height:62px; }
-.lamina.tiktok .disco-marca { width:34px; height:34px; }
-.lamina.tiktok .etiqueta { font-size:30px; }
-.lamina.tiktok .cuerpo { font-size:50px; margin-top:14px; }
-.lamina.tiktok .dato-lineas { font-size:58px; }
-.lamina.tiktok .ilu-col { flex:0 0 150px; height:132px; }
+.lamina.tiktok .riel { font-size:26px; }
+/* En vertical quedan 876 px de ancho util: la cifra se va arriba en vez de
+   comerle la mitad del ancho al titular. */
+.lamina.tiktok .cab { flex-direction:column; gap:16px; margin-top:56px; }
+.lamina.tiktok .cifra { font-size:150px; }
+.lamina.tiktok .tit-col { padding-top:0; }
+.lamina.tiktok .antetitulo { font-size:34px; }
+.lamina.tiktok .titulo { font-size:84px; }
+.lamina.tiktok .fila { padding:38px 0; }
+.lamina.tiktok .etiqueta { font-size:28px; }
+.lamina.tiktok .cuerpo { font-size:52px; }
+.lamina.tiktok .dato-lineas { font-size:46px; }
+.lamina.tiktok .clara .dato-bloque,
+.lamina.tiktok.clara .dato-bloque { padding:30px; }
 
 .lamina.tiktok .kicker { font-size:32px; }
 .lamina.tiktok .portada-titulo { font-size:102px; }
@@ -371,19 +377,23 @@ body { -webkit-font-smoothing:antialiased; text-rendering:geometricPrecision;
 .lamina.tiktok .pie-txt, .lamina.tiktok .pie-der { font-size:28px; }
 
 /* ---------------------------------------------------------------- PIE */
-.pie { margin-top:24px; border-top:3px solid %(tinta)s; padding-top:20px;
+.pie { margin-top:34px; padding-top:22px;
        display:flex; align-items:center; justify-content:space-between; }
-.pie-izq { display:flex; align-items:center; gap:20px; }
-.logo-pie { height:104px; width:auto; display:block; }
-.pie-txt { font-family:Texto; font-size:26px; letter-spacing:.16em;
-           line-height:1.5; color:%(tinta)s; text-transform:uppercase; }
-.pie-txt .handle { text-transform:none; letter-spacing:.07em; color:%(cuero)s; }
-.pie-der { font-family:Texto; font-size:26px; letter-spacing:.16em;
-           color:%(tinta)s; text-transform:uppercase; text-align:right; }
+.clara .pie { border-top:2px solid %(tinta)s; }
+.oscura .pie { border-top:2px solid rgba(225,197,143,.45); }
+.pie-izq { display:flex; align-items:center; gap:22px; }
+.logo-pie { height:86px; width:auto; display:block; }
+.pie-txt { font-family:Texto; font-size:26px; letter-spacing:.10em; line-height:1.4; }
+.clara .pie-txt { color:%(cuero)s; }
+.oscura .pie-txt { color:%(dorado_luz)s; }
+.pie-der { font-family:Texto; font-size:25px; letter-spacing:.18em;
+           text-transform:uppercase; text-align:right; }
+.clara .pie-der { color:%(gris)s; }
+.oscura .pie-der { color:%(humo)s; }
 """ % {
         "marca": a["marca"], "display": a["display"], "texto": a["texto"],
-        "caja": p["caja"], "t_portada": round(96 * e), "t_titulo": round(88 * e),
-        "t_dato": round(58 * e), "t_plazo": round(124 * e), "t_cta": round(50 * e),
+        "caja": p["caja"], "t_portada": round(96 * e), "t_titulo": round(94 * e),
+        "t_dato": round(60 * e), "t_plazo": round(124 * e), "t_cta": round(50 * e),
         "grano": GRANO, "ancho": ANCHO, "alto": ALTO,
         "seg_abajo": SEGURO_ABAJO, "seg_der": SEGURO_DERECHA,
         "negro": NEGRO, "dorado": DORADO, "dorado_luz": DORADO_LUZ,
@@ -407,46 +417,42 @@ def _documento(clase, contenido, alto=ALTO):
     )
 
 
-def _cabecera(s, pagina):
+def _riel(s):
+    """La franja de arriba. Reemplaza al masthead, que se repetia en las cinco
+    laminas ocupando la quinta parte de cada una."""
     return (
-        "<div class='barra-sup'><span>%s</span>"
-        "<span>Cuidado en casa</span><span>N.&deg; %s · %s</span></div>"
-        "<div class='masthead'><div class='folio'>%d</div>"
-        "<div class='marca'>%s</div>"
-        "<div class='bajada'>%s</div></div>"
-        "<div class='doble-regla'><i></i><i></i></div>"
-        % (_escapar(s["seccion"]), s["num"], ANO, pagina, MARCA, BAJADA)
+        "<div class='riel'><span>%s</span><i></i>"
+        "<span class='sec'>%s</span><i></i>"
+        "<span>N.&deg; %s · %s</span></div>"
+        % (MARCA, _escapar(s["seccion"]), s["num"], ANO)
     )
 
 
-def _pie(pagina, derecha=None):
+def _pie(pagina, oscura=False, derecha=None):
     a = assets()
     der = derecha if derecha is not None else "Lámina %d de 6" % pagina
     return (
         "<div class='pie'><div class='pie-izq'>"
         "<img class='logo-pie' src='%s' alt=''>"
-        "<div class='pie-txt'>La Fiore /<br><span class='handle'>%s</span></div>"
+        "<div class='pie-txt'>%s</div>"
         "</div><div class='pie-der'>%s</div></div>"
-        % (a["logo_dorado"], HANDLE, der)
+        % (a["logo_blanco"] if oscura else a["logo_dorado"], HANDLE, der)
     )
 
 
-def _fila(tipo, etiqueta, simbolo, texto, icono):
+def _fila(tipo, etiqueta, texto):
     return (
-        "<div class='fila'><div class='disco %s'>%s</div>"
-        "<div class='bloque'><div class='etiqueta %s'>%s</div>"
+        "<div class='fila'><div class='etiqueta %s'><i></i>%s</div>"
         "<div class='cuerpo'>%s</div></div>"
-        "<div class='ilu-col'>%s</div></div>"
-        % (tipo, simbolo, tipo, etiqueta, _escapar(texto), iconos.svg(icono))
+        % (tipo, _escapar(etiqueta), _escapar(texto))
     )
 
 
-def _fila_dato(a_txt, b_txt):
+def _bloque_dato(a_txt, b_txt):
     return (
-        "<div class='fila dato-fila'><div class='disco dato'>%s</div>" % iconos.marca("dato", DORADO)
-        + "<div class='bloque'><div class='etiqueta dato'>El dato</div>"
-          "<div class='dato-lineas'><div class='a'>%s</div><div class='b'>%s</div></div></div></div>"
-          % (_escapar(a_txt), _escapar(b_txt))
+        "<div class='dato-bloque'><div class='etiqueta dato'>El dato</div>"
+        "<div class='dato-lineas'><div class='a'>%s</div><div class='b'>%s</div></div></div>"
+        % (_escapar(a_txt), _escapar(b_txt))
     )
 
 
@@ -485,22 +491,28 @@ def historia(s):
 
 
 def interior(s, indice):
-    """indice 0..3 -> laminas 2..5."""
+    """indice 0..3 -> laminas 2..5.
+
+    Las pares van claras y las impares oscuras, para que el carrusel lata al
+    deslizar en vez de mostrar cuatro fichas iguales.
+    """
     p = s["paginas"][indice]
     n = indice + 2
+    oscura = indice % 2 == 1
     contenido = (
-        _cabecera(s, n)
-        + "<div class='antetitulo'>%s</div>" % _escapar(p["ante"])
-        + "<h2 class='titulo'>%s</h2>" % marcar(p["titulo"])
-        + "<div class='filas'>%s%s%s</div>" % (
-            _fila("casa", "En casa", iconos.marca("casa", HUESO), p["casa"], p["casa_icono"]),
-            _fila("salon", "En el salón", iconos.marca("salon", "#FFFFFF"),
-                  p["salon"], p["salon_icono"]),
-            _fila_dato(p["dato_a"], p["dato_b"]),
+        _riel(s)
+        + "<div class='cab'><div class='cifra'>%02d</div><div class='tit-col'>"
+          "<div class='antetitulo'>%s</div>"
+          "<h2 class='titulo'>%s</h2></div></div>" % (
+              indice + 1, _escapar(p["ante"]), marcar(p["titulo"]))
+        + "<div class='filas'>%s%s</div>" % (
+            _fila("casa", "En casa", p["casa"]),
+            _fila("salon", "En el salón", p["salon"]),
         )
-        + _pie(n)
+        + _bloque_dato(p["dato_a"], p["dato_b"])
+        + _pie(n, oscura=oscura)
     )
-    return _documento("interior", contenido)
+    return _documento("interior " + ("oscura" if oscura else "clara"), contenido)
 
 
 def cierre(s):
