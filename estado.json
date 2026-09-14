@@ -66,10 +66,10 @@
     },
     {
       "set": "set_09",
-      "estado": "pendiente",
+      "estado": "error",
       "publicado_en": null,
       "media_id": null,
-      "intentos": 0
+      "intentos": 1
     },
     {
       "set": "set_10",
